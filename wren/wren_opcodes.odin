@@ -80,6 +80,7 @@ Code :: enum u8 {
 	END               ,   // This pseudo-instruction indicates the end of the bytecode, It should always be preceded by a RETURN, so is never actually executed.
 }
 
+// The stack effect of each opcode. The index in the array is the opcode, and the value is the stack effect of that instruction
 CODE_STACK_EFFECTS := [Code]int {
 	.CONSTANT          = 1,
 	.NULL              = 1,

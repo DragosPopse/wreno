@@ -1,1 +1,5 @@
 package wren
+
+VM :: struct {
+	
+}

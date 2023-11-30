@@ -194,7 +194,7 @@ when NAN_TAGGING {
 	}
 }
 
-Obj_Kind :: enum {
+Obj_Type :: enum {
 	Class,
 	Closure,
 	Fiber,
@@ -213,7 +213,7 @@ Obj_Kind :: enum {
 
 // Base struct for all heap allocated objects
 Obj :: struct {
-	kind     : Obj_Kind,
+	type     : Obj_Type,
 	is_dark  : bool,
 	class_obj: ^Obj_Class,   // The object's class
 	next     : ^Obj,         // The next object in the linked list of all currently allocated objects
@@ -377,6 +377,7 @@ Map_Entry :: struct {
 }
 
 // Note(Dragos): Make this odin nice
+// Could this be a map[Value]Value? I'm not entirely sure but we can give it a shot
 Obj_Map :: struct {
 	obj     : Obj,
 	capacity: u32,            // The number of entries allocated

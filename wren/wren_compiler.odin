@@ -126,6 +126,10 @@ Parser :: struct {
 
 }
 
+Compiler :: struct {
+	
+}
+
 Local :: struct {
 	name      : string,   // Points directly into the original source code string
 	depth     : int,      // The depth of the scope chain that this variable was declared in. Zero is the outermost scope, parameters for a metod, or the first local block in top level code. One is the scope within that, etc.

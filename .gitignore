@@ -11,3 +11,5 @@
 !build/**
 !wren/**
 
+# Root
+!ORIGINAL_LICENSE

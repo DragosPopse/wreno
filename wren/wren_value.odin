@@ -146,7 +146,7 @@ when NAN_TAGGING {
 	}
 
 } else {
-	Value_Kind :: struct {
+	Value_Kind :: enum {
 		False,
 		Null,
 		Num,
@@ -163,10 +163,10 @@ when NAN_TAGGING {
 		}
 	}
 
-	NULL_VAL      :: Value {.Null, {}}
-	FALSE_VAL     :: Value {.False, {}}
-	TRUE_VAL      :: Value {.True, {}}
-	UNDEFINED_VAL :: Value {.Undefined, {}}
+	NULL_VAL      := Value {Value_Kind.Null, {}}
+	FALSE_VAL     := Value {Value_Kind.False, {}}
+	TRUE_VAL      := Value {Value_Kind.True, {}}
+	UNDEFINED_VAL := Value {Value_Kind.Undefined, {}}
 
 	value_is_num :: proc(value: Value) -> bool {
 		return value.kind == .Num
@@ -221,6 +221,7 @@ Obj :: struct {
 
 // Heap allocated string object
 // Note(Dragos): figure out how to handle strings as non-null terminated, might be easier and nicer
+// Note(Dragos): Could this just be a raw builtin.string ?
 Obj_String :: struct {
 	obj   : Obj,
 	length: u32,
@@ -318,7 +319,7 @@ Fiber_State :: enum {
 Obj_Fiber :: struct {
 	obj           : Obj,
 	stack         : ^Value,                 // The stack of value slots. This is used for holding local variables and temporaries while the fiber is executing. It is heap-allocated and grown as needed
-	stack_top     : ^Value,                 // A pointer to one past the top-most value of the stack
+	stack_top     : [^]Value,                 // A pointer to one past the top-most value of the stack
 	stack_capacity: int,                    // The number of allocated slots in the stack array
 	frames        : [dynamic]^Call_Frame,   // The stack of call frames. Grows as needed but never shrinks
 	open_upvalues : ^Obj_Upvalue,           // Pointer to the first node in the linked list of open upvalues that are pointing to valeus still on the stack. The head of the list will be the upvalue closest to the top of the stack, and then the list works downwards
@@ -392,6 +393,45 @@ Obj_Range :: struct {
 	is_inclusive: bool,   // True if [to] is included in the range
 }
 
-is_bool :: proc(value: Value) {
+init_obj :: proc(vm: ^VM, obj: ^Obj, type: Obj_Type, class_obj: ^Obj_Class) {
+	obj.type      = type
+	obj.is_dark   = false
+	obj.class_obj = class_obj
+	obj.next      = vm.first
+	vm.first      = obj
+}
 
+new_single_class :: proc(vm: ^VM, num_fields: int, name: ^Obj_String) -> ^Obj_Class {
+	class_obj := vm_allocate(vm, Obj_Class)
+	init_obj(vm, &class_obj.obj, .Class, nil)
+	class_obj.num_fields = num_fields
+	class_obj.name       = name
+	class_obj.attributes = NULL_VAL
+	push_root(vm, &class_obj.obj)
+	class_obj.methods = make([dynamic]Method, vm.config.allocator)
+	pop_root(vm)
+	return class_obj
+}
+
+bind_superclass :: proc(vm: ^VM, subclass, superclass: ^Obj_Class) {
+	assert(superclass != nil, "Must have superclass")
+	subclass.superclass = superclass
+	if subclass.num_fields != -1 {
+		subclass.num_fields += superclass.num_fields
+	} else {
+		assert(superclass.num_fields == 0, "A foreign class cannot inherit from a class with fields")
+	}
+
+	// Inherit methods from its superclass
+	for method, i in superclass.methods {
+		bind_method(vm, subclass, i, method) 
+	}
+}
+
+// Note(Dragos): This isn't the greatest I believe, especially in combination with how it's used in wren.bind_superclass
+bind_method :: proc(vm: ^VM, class_obj: ^Obj_Class, symbol: int, method: Method) {
+	if symbol >= len(class_obj.methods) {
+		resize(&class_obj.methods, symbol + 1)
+	}
+	class_obj.methods[symbol] = method
 }

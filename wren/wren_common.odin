@@ -40,4 +40,27 @@ MAX_VARIABLE_NAME :: 64
 // field index*.
 MAX_FIELDS :: 255
 
-// Todo(Dragos): Allocation methods
+Error_Type :: enum {
+	Compile    ,  // Syntax/resolution error detected at compile time
+	Runtime    ,  // Runtime error
+	Stack_Trace,  // One entry of a runtime error's stack trace
+}
+
+Type :: enum {
+	Bool,
+	Num,
+	Foreign,
+	List,
+	Map,
+	Null,
+	String,
+}
+
+Interpret_Result :: enum {
+	Success,
+	Compile_Error,
+	Runtime_Error,
+}
+
+Error_Proc :: #type proc(vm: ^VM, type: Error_Type, module: string, line: int, message: string)
+Write_Proc :: #type proc(vm: ^VM, text: string)

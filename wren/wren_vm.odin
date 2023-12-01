@@ -1,5 +1,7 @@
 package wren
 
+import "core:runtime"
+
 MAX_TEMP_ROOTS :: 8  // The maximum number of temporary objects that can be made visible to the gc at one time
 
 // A handle to a value, basically just a linked list of extra GC roots.
@@ -9,10 +11,6 @@ Handle :: struct {
 	value: Value,
 	prev : ^Handle,
 	next : ^Handle,
-}
-
-Config :: struct {
-
 }
 
 VM :: struct {
@@ -41,4 +39,32 @@ VM :: struct {
 	config         : Config,
 	compiler       : ^Compiler,              // compiler and debugger data. The compiler that is currently compiling code. This is used so tthat heap alloc objects used by the compiler can be found if a gc is kicked off in the middle of a compile.
 	method_names   : [dynamic]string,        // There is a single global symbol table for all method names of all classes. Method calls are dispatched directly by index in this table
+}
+
+// Use the VM allocator to allocate a new object T
+vm_allocate :: proc(vm: ^VM, $T: typeid) -> ^T {
+	return new(T, vm.config.allocator)
+}
+
+push_root :: proc(vm: ^VM, obj: ^Obj, loc := #caller_location) {
+	assert(obj != nil, "Can't root nil")
+	assert(vm.num_temp_roots < MAX_TEMP_ROOTS, "Too many temporary roots")
+	vm.temp_roots[vm.num_temp_roots] = obj
+	vm.num_temp_roots += 1
+}
+
+pop_root :: proc(vm: ^VM, loc := #caller_location) {
+	assert(vm.num_temp_roots > 0, "No temporary roots to be released")
+	vm.num_temp_roots -= 1
+}
+
+@(deferred_out = pop_root)
+temp_root :: proc(vm: ^VM, obj: ^Obj, loc := #caller_location) -> (^VM, runtime.Source_Code_Location) {
+	push_root(vm, obj, loc)
+	return vm, loc
+} 
+
+// Note(Dragos): Maybe we can make this more odin-nice
+get_slot_count :: proc(vm: ^VM) -> int {
+	return int(uintptr(vm.fiber.stack_top) - uintptr(vm.api_stack)) if vm.api_stack != nil else 0
 }

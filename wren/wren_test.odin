@@ -14,7 +14,7 @@ test_vm :: proc(T: ^testing.T) {
 test_map :: proc(T: ^testing.T) {
 	m: map[Value]Value
 	val: Value = 21 // First key
-	str := new(Obj_String)
+	str := new(String)
 	mi := runtime.map_info(type_of(m))
 	raw_map := transmute(^runtime.Raw_Map)&m
 	str.text = "Hellope"

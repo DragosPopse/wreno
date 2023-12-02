@@ -120,29 +120,41 @@ when NAN_TAGGING {
 	UNDEFINED_VAL :: Value(QNAN | TAG_UNDEFINED)
 
 	// If the NaN bits are set, it's not a number
-	value_is_num :: proc(value: Value) -> bool {
+	value_is_num :: proc "contextless" (value: Value) -> bool {
 		return (value & QNAN) != QNAN
 	}
 
 	// An object pointer is a NaN with a set sign bit
-	value_is_obj :: proc(value: Value) -> bool {
+	value_is_obj :: proc "contextless" (value: Value) -> bool {
 		return (value & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT)
 	}
 
-	value_is_false :: proc(value: Value) -> bool {
+	value_is_false :: proc "contextless" (value: Value) -> bool {
 		return value == FALSE_VAL
 	}
 
-	value_is_true :: proc(value: Value) -> bool {
+	value_is_true :: proc "contextless" (value: Value) -> bool {
 		return value == TRUE_VAL
 	}
 
-	value_is_null :: proc(value: Value) -> bool {
+	value_is_null :: proc "contextless" (value: Value) -> bool {
 		return value == NULL_VAL
 	}
 
-	value_is_undefined :: proc(value: Value) -> bool {
+	value_is_undefined :: proc "contextless" (value: Value) -> bool {
 		return value == UNDEFINED_VAL
+	}
+
+	value_as_object :: proc "contextless" (value: Value) -> ^Object {
+		return cast(^Object)cast(uintptr)(value & ~(SIGN_BIT | QNAN))
+	}
+
+	value_as_bool :: proc "contextless" (value: Value) -> bool {
+		return value == TRUE_VAL
+	}
+
+	values_same :: proc "contextless" (a, b: Value) -> bool {
+		return a == b
 	}
 
 } else {
@@ -168,83 +180,32 @@ when NAN_TAGGING {
 	TRUE_VAL      := Value {Value_Kind.True, {}}
 	UNDEFINED_VAL := Value {Value_Kind.Undefined, {}}
 
-	value_is_num :: proc(value: Value) -> bool {
+	value_is_num :: proc "contextless" (value: Value) -> bool {
 		return value.kind == .Num
 	}
 
 	// An object pointer is a NaN with a set sign bit
-	value_is_obj :: proc(value: Value) -> bool {
+	value_is_obj :: proc "contextless" (value: Value) -> bool {
 		return value.kind == .Obj
 	}
 
-	value_is_false :: proc(value: Value) -> bool {
+	value_is_false :: proc "contextless" (value: Value) -> bool {
 		return value.kind == .False
 	}
 
-	value_is_true :: proc(value: Value) -> bool {
+	value_is_true :: proc "contextless" (value: Value) -> bool {
 		return value.kind == .True
 	}
 
-	value_is_null :: proc(value: Value) -> bool {
+	value_is_null :: proc "contextless" (value: Value) -> bool {
 		return value.kind == .Null
 	}
 
-	value_is_undefined :: proc(value: Value) -> bool {
+	value_is_undefined :: proc "contextless" (value: Value) -> bool {
 		return value.kind == .Undefined
 	}
 }
 
-Obj_Type :: enum {
-	Class,
-	Closure,
-	Fiber,
-	Fn,
-	Foreign,
-	Instance,
-	List,
-	Map,
-	Module,
-	Range,
-	String,
-	Upvalue,
-}
-
-// Note(Dragos): Could this all be a big tagged union?
-
-// Base struct for all heap allocated objects
-Obj :: struct {
-	type     : Obj_Type,
-	is_dark  : bool,
-	class_obj: ^Obj_Class,   // The object's class
-	next     : ^Obj,         // The next object in the linked list of all currently allocated objects
-}
-
-// Heap allocated string object
-// Note(Dragos): figure out how to handle strings as non-null terminated, might be easier and nicer
-// Note(Dragos): Could this just be a raw builtin.string ?
-Obj_String :: struct {
-	obj : Obj,
-	text: string,
-}
-
-// The dynamically allocated data structure for a variable that has been used
-// by a closure. Whenever a function accesses a variable declared in an
-// enclosing function, it will get to it through this.
-//
-// An upvalue can be either "closed" or "open". An open upvalue points directly
-// to a [Value] that is still stored on the fiber's stack because the local
-// variable is still in scope in the function where it's declared.
-//
-// When that local variable goes out of scope, the upvalue pointing to it will
-// be closed. When that happens, the value gets copied off the stack into the
-// upvalue itself. That way, it can have a longer lifetime than the stack
-// variable.
-Obj_Upvalue :: struct {
-	obj   : Obj,            // The object header. Note that upvalues have this because they are garbage collected, but they are not first class wren objects
-	value : ^Value,         // Pointer to the variable this upvalue is referencing
-	closed: Value,          // If the upvalue is closed (the local variable it was pointing to has been popped off the stack), then the closed-over value will be hoisted out of the stack into here. [value] will then be changed to point to this
-	next  : ^Obj_Upvalue,   // Open upvalues are stored in a linked list by the fiber, this points to the next upvalue in that list
-}
 
 // The type of a primitive function.
 //
@@ -262,69 +223,13 @@ Fn_Debug :: struct {
 	source_lines: [dynamic]int,   // An array of line numbers. There is one element in this array for each bytecode in the function's bytecode array. The value of that element is the line in the source code that generated that instruction. 
 }
 
-// A loaded module and the top-level variables it defines.
-//
-// While this is an Obj and is managed by the GC, it never appears as a
-// first-class object in Wren.
-Obj_Module :: struct {
-	obj           : Obj,
-	variables     : [dynamic]Value,    // The currently defined top-level variables
-	variable_names: [dynamic]string,   // Symbol table for the names of all module variables. Indexes here directly correspond to entries in [variables]
-	name          : ^Obj_String,       // The name of the module
-}
-
-// A function object. It wraps and owns the bytecode and other debug information
-// for a callable chunk of code.
-//
-// Function objects are not passed around and invoked directly. Instead, they
-// are always referenced by an [Obj_Closure] which is the real first-class
-// representation of a function. This isn't strictly necessary if they function
-// has no upvalues, but lets the rest of the VM assume all called objects will
-// be closures.
-Obj_Fn :: struct {
-	obj         : Obj,
-	code        : [dynamic]byte,
-	constants   : [dynamic]Value,
-	module      : ^Obj_Module,      // The module where this function was defined
-	max_slots   : int,              // The maximum number of stack slots this function may use
-	num_upvalues: int,              // The number of upvalues this function closes over
-	arity       : int,              // The number of parameters this function expects. Used to ensure that .call handles a mismatched number of parameters and arguments. This will only be set for fns, and not Obj_Fns that represent methods or scripts
-	debug       : ^Fn_Debug,
-}
-
-// An instance of a first-class function and the environment it has closed over.
-// Unlike [Obj_Fn], this has captured the upvalues that the function accesses.
-Obj_Closure :: struct {
-	obj     : Obj,
-	fn      : ^Obj_Fn,                 // The function that this closure is an instance of
-	upvalues: [dynamic]^Obj_Upvalue,   // The upvalues this function has closed over
-}
 
 Call_Frame :: struct {
 	ip         : ^byte,          // Pointer to the current (really next-to-be-executed) instruction in the function's bytecode. Note(Dragos): Can this be an index in the [dynamic]byte? Or a [^]?
-	closure    : ^Obj_Closure,   // The closure being executed
+	closure    : ^Closure,   // The closure being executed
 	stack_start: ^Value,         // Pointer to the first stack slot used by this call frame. This will contain the receiver, followed by the function's parameters, then local variables and temporaries
 }
 
-// Tracks how this fiber has been invoked, aside from the ways that can be
-// detected from the state of other fields in the fiber.
-Fiber_State :: enum {
-	Try  ,  // The fiber is being run from another fiber using a call to `try()`
-	Root ,  // The fiber was directly invoked by `run_interpreter()`. This means it's the initial fiber used by a call to `wren.call()` or `wren.interpret()`
-	Other,  // The fiber is invoked some other way. If [caller] is `NULL` then the fiber was invoked using `call()`. If [num_frames] is zero, then the fiber has finished running and is done. If [num_frames] is one and that frame's `ip` points to the first byte of code, the fiber has not been started yet.
-}
-
-Obj_Fiber :: struct {
-	obj           : Obj,
-	stack         : ^Value,                 // The stack of value slots. This is used for holding local variables and temporaries while the fiber is executing. It is heap-allocated and grown as needed
-	stack_top     : [^]Value,                 // A pointer to one past the top-most value of the stack
-	stack_capacity: int,                    // The number of allocated slots in the stack array
-	frames        : [dynamic]^Call_Frame,   // The stack of call frames. Grows as needed but never shrinks
-	open_upvalues : ^Obj_Upvalue,           // Pointer to the first node in the linked list of open upvalues that are pointing to valeus still on the stack. The head of the list will be the upvalue closest to the top of the stack, and then the list works downwards
-	caller        : ^Obj_Fiber,             // The fiber that ran this one. IF this fiber is yielded, control will resume to this one. May be nil
-	error         : Value,                  // If the fiber failed because of a runtime error, this will contain the error object. Otherwise, it will be null 
-	state         : Fiber_State
-}
 
 Method_Kind :: enum {
 	Primitive    ,  // A primitive method implemented in C/Odin in the VM. Unlike foreign methods, this can directly manipulate the fiber's stack
@@ -340,58 +245,14 @@ Method :: struct {
 	as: struct #raw_union {
 		primitive: Primitive,
 		foreign_fn: Foreign_Method_Fn,
-		closure: ^Obj_Closure,
+		closure: ^Closure,
 	}
 }
 
 Foreign_Method_Fn :: #type proc "c"() // Todo(Implement)
 
-Obj_Class :: struct {
-	obj       : Obj,
-	superclass: ^Obj_Class,
-	num_fields: int,               // The number of fields needed for an instance of this class, including all of its superclass fields
-	methods   : [dynamic]Method,   // The table of methods that are defined in or inherited by this class. Methods are called by the symbol, and the symbol directly maps to an index in this table. This makes method calls fast at the expense of empty cells in the list of methods the class doesn't support. You can think of it as a hash table that never has collisions but has a really low load factor. Since methods are pretty small (just a type and a pointer), this should be a worthwhile trade-off
-	name      : ^Obj_String,       // The name of the class
-	attributes: Value,             // The Class_Attributes for the class, if any
-}
 
-Obj_Foreign :: struct {
-	obj : Obj,
-	data: [^]byte,   // FLEXIBLE_ARRAY
-}
-
-Obj_Instance :: struct {
-	obj   : Obj,
-	fields: [^]Value,   // FLEXIBLE_ARRAY
-}
-
-Obj_List :: struct {
-	obj     : Obj,
-	elements: [dynamic]Value,   // The elements in the list
-}
-
-Map_Entry :: struct {
-	key  : Value,   // The entry's key, or UNDEFINED_VAL if the entry is not in use
-	value: Value,   // The value associated with the key. If the key is UNDEFINED_VAL, this will be false to indicate an open available entry or true to indicate a tombstone -- an entry that has previously in use but was then deleted
-}
-
-// Note(Dragos): Make this odin nice
-// Could this be a map[Value]Value? I'm not entirely sure but we can give it a shot
-Obj_Map :: struct {
-	obj     : Obj,
-	capacity: u32,            // The number of entries allocated
-	count   : u32,            // The number of entries in the map
-	entries : [^]Map_Entry,   // Pointer to contiguous array of [capacity] entries
-}
-
-Obj_Range :: struct {
-	obj         : Obj,
-	from        : f64,
-	to          : f64,
-	is_inclusive: bool,   // True if [to] is included in the range
-}
-
-object_to_value :: proc(obj: ^Obj) -> Value {
+object_to_value :: proc(obj: ^Object) -> Value {
 	when NAN_TAGGING {
 		return Value(SIGN_BIT | QNAN | cast(u64)uintptr(obj))
 	} else {
@@ -402,17 +263,33 @@ object_to_value :: proc(obj: ^Obj) -> Value {
 	}
 }
 
-init_obj :: proc(vm: ^VM, obj: ^Obj, type: Obj_Type, class_obj: ^Obj_Class) {
-	obj.type      = type
-	obj.is_dark   = false
-	obj.class_obj = class_obj
-	obj.next      = vm.first
-	vm.first      = obj
+values_equal :: proc(a, b: Value) -> bool {
+	if values_same(a, b) do return true
+	
+	// If we get here, it's only possible for 2 heap-allocated immutable objects to be equal
+	if !value_is_obj(a) || !value_is_obj(b) do return false
+	a_obj := value_as_object(a)
+	b_obj := value_as_object(b)
+	if a_obj.type != b_obj.type do return false
+	#partial switch a_obj.type {
+	case .Range: 
+		a_range := cast(^Range)a_obj
+		b_range := cast(^Range)b_obj
+		return a_range.from == b_range.from && a_range.to == b_range.to && a_range.is_inclusive == b_range.is_inclusive
+	case .String:
+		a_str := cast(^String)a_obj
+		b_str := cast(^String)b_obj
+		return a_str.text == b_str.text
+	}
+
+	return false
 }
 
-new_single_class :: proc(vm: ^VM, num_fields: int, name: ^Obj_String) -> ^Obj_Class {
-	class_obj := vm_allocate(vm, Obj_Class)
-	init_obj(vm, &class_obj.obj, .Class, nil)
+
+
+new_single_class :: proc(vm: ^VM, num_fields: int, name: ^String) -> ^Class {
+	class_obj := vm_allocate(vm, Class)
+	object_init(vm, &class_obj.obj, .Class, nil)
 	class_obj.num_fields = num_fields
 	class_obj.name       = name
 	class_obj.attributes = NULL_VAL
@@ -422,7 +299,7 @@ new_single_class :: proc(vm: ^VM, num_fields: int, name: ^Obj_String) -> ^Obj_Cl
 	return class_obj
 }
 
-bind_superclass :: proc(vm: ^VM, subclass, superclass: ^Obj_Class) {
+bind_superclass :: proc(vm: ^VM, subclass, superclass: ^Class) {
 	assert(superclass != nil, "Must have superclass")
 	subclass.superclass = superclass
 	if subclass.num_fields != -1 {
@@ -438,13 +315,13 @@ bind_superclass :: proc(vm: ^VM, subclass, superclass: ^Obj_Class) {
 }
 
 // Note(Dragos): This isn't the greatest I believe, especially in combination with how it's used in wren.bind_superclass
-bind_method :: proc(vm: ^VM, class_obj: ^Obj_Class, symbol: int, method: Method) {
+bind_method :: proc(vm: ^VM, class_obj: ^Class, symbol: int, method: Method) {
 	if symbol >= len(class_obj.methods) {
 		resize(&class_obj.methods, symbol + 1)
 	}
 	class_obj.methods[symbol] = method
 }
 
-new_class :: proc(vm: ^VM, superclass: ^Obj_Class, num_fields: int, name: ^Obj_String) {
+new_class :: proc(vm: ^VM, superclass: ^Class, num_fields: int, name: ^String) {
 	unimplemented()
 }

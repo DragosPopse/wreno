@@ -2,6 +2,8 @@ package wren
 
 import "core:unicode"
 import "core:unicode/utf8"
+import "core:fmt"
+import "core:strings"
 
 // The maximum number of local (i.e. not module level) variables that can be
 // declared in a single function, method, or chunk of top level code. This is
@@ -127,7 +129,7 @@ Token :: struct {
 
 Parser :: struct {
 	vm          : ^VM,
-	module      : ^Obj_Module,                      // The module being parsed
+	module      : ^Module,                      // The module being parsed
 	sourcce     : string,                           // The source code being parsed
 	token_start : string,                           // The beginning of the currently-being-lexed token in [source]
 	current_char: string,                           // The current character being lexed in [source] Note(dragos): this could be an int for the position?
@@ -137,12 +139,20 @@ Parser :: struct {
 	previous    : Token,                            // Most recently consumed/advanced token
 	parens      : [MAX_INTERPOLATION_NESTING]int,   // Tracks the lexing state when tokenizing interpolated strings
 	num_parens  : int,
-	print_erros : bool,                             // Print to stderr or discard
+	print_errors: bool,                             // Print to stderr or discard
 	has_errors  : bool,                             // Syntax or compile error occured
 }
 
 Class_Info :: struct {
-
+	name             : ^String,       // The name of the class
+	class_attributes : ^Map,          // Attributes for the class itself
+	method_attributes: ^Map,          // Attributes for methods in this class
+	fields           : [dynamic]string,   // Symbol table for the fields of the class
+	methods          : [dynamic]int,      // Symbols for the methods defined by the class. Used to detect duplicate method definitions
+	static_methods   : [dynamic]int,
+	is_foreign       : bool,              // True if the class being compiled is a foreign class
+	in_static        : bool,              // True if the current method being compiled is static
+	signature        : ^Signature,        //The signature of the method being compiled
 }
 
 Compiler :: struct {
@@ -155,11 +165,11 @@ Compiler :: struct {
 	num_slots      : int,                              // Number of slots (locals and temps) in use. We use this and max_slots to track the maximum number of additional slots a function may need while executing. When the funciton is called, the fiber will check to ensure it's stack has enough room to cover that worst case and grow the stack if needed. This value doesn't include parameters to the function, since those are already pushed onto the stack by the caller and tracked here, we don't need to double count them here.
 	loop           : ^Loop,                            // The current innermost loop being compiled, or nil if not in a loop
 	enclosing_class: ^Class_Info,                      // If this is a compiler for a method, keep track of the class enclosing it
-	fn             : ^Obj_Fn,                          // The function being compiled
-	constants      : ^Obj_Map,                         // The constants for the function being compiled
+	fn             : ^Fn,                          // The function being compiled
+	constants      : ^Map,                         // The constants for the function being compiled
 	is_initializer : bool,                             // Whether or not the compiler is for a constructor initializer
 	num_attributes : int,                              // The num of attributes seen while parsing. We track this separately as compile time attributes are not stored, so we can't rely on attributes.count to enforce an error message when attributes are used anywhere other than methods or classes
-	attributes     : ^Obj_Map,                         // Attributes for the next class or method
+	attributes     : ^Map,                         // Attributes for the next class or method
 }
 
 Scope :: enum {
@@ -279,6 +289,67 @@ init_compiler :: proc(compiler: ^Compiler, parser: ^Parser, parent: ^Compiler, i
 	}
 
 	compiler.num_attributes = 0
+	unimplemented()
+}
+
+@private
+disallow_attributes :: proc(compiler: ^Compiler) {
+
+}
+
+@private
+add_to_attribute_group :: proc(compiler: ^Compiler, group, key, value: Value) {
+
+}
+
+@private
+emit_class_attributes :: proc(compiler: ^Compiler, class_info: ^Class_Info) {
+
+}
+
+@private
+copy_method_attributes :: proc(compiler: ^Compiler, is_foreign: bool, is_static: bool, full_signature: string) {
+
+}
+
+@private
+print_error :: proc(parser: ^Parser, line: int, label: string, format: string, args: ..any) {
+	parser.has_errors = true
+	if !parser.print_errors do return
+	if parser.vm.config.error == nil do return
+	module_name := parser.module.name.text if parser.module.name.text != "" else "<invalid>"
+	err_string := fmt.tprintf(format, args)
+	err_string = fmt.tprintf("%s: %s", label, err_string)
+	parser.vm.config.error(parser.vm, .Compile, module_name, line, err_string)
+}
+
+@private
+lex_error :: proc(parser: ^Parser, format: string, args: ..any) {
+	print_error(parser, parser.current_line, "Error", format, args)
+}
+
+@private
+error :: proc(compiler: ^Compiler, format: string, args: ..any) {
+	token := compiler.parser.previous
+	if token.kind == .ERROR do return // If the parse error was caused by an error token, the lexer has already reported it
+	if token.kind == .LINE {
+		print_error(compiler.parser, token.line, "Error at newline", format, args)
+	} else if token.kind == .EOF {
+		print_error(compiler.parser, token.line, "Error at end of file", format, args)
+	} else {
+		label := fmt.tprintf("Error at '%s'", token.text)
+		print_error(compiler.parser, token.line, label, format, args)
+	}
+}
+
+// Add [constant] to the constant pool and returns it's index
+@private
+add_constant :: proc(compiler: ^Compiler, constant: Value) -> int {
+	if compiler.parser.has_errors do return -1
+	// see if we already have a constant for the value, and reuse it if so
+	if compiler.constants != nil {
+		unimplemented()
+	}
 	unimplemented()
 }
 

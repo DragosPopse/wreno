@@ -81,7 +81,8 @@ Code :: enum u8 {
 }
 
 // The stack effect of each opcode. The index in the array is the opcode, and the value is the stack effect of that instruction
-CODE_STACK_EFFECTS := [Code]int {
+@private
+stack_effects := [Code]int {
 	.CONSTANT          = 1,
 	.NULL              = 1,
 	.FALSE             = 1,

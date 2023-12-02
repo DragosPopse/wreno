@@ -223,10 +223,8 @@ Obj :: struct {
 // Note(Dragos): figure out how to handle strings as non-null terminated, might be easier and nicer
 // Note(Dragos): Could this just be a raw builtin.string ?
 Obj_String :: struct {
-	obj   : Obj,
-	length: u32,
-	hash  : u32,
-	value : cstring,
+	obj : Obj,
+	text: string,
 }
 
 // The dynamically allocated data structure for a variable that has been used
@@ -383,7 +381,7 @@ Obj_Map :: struct {
 	obj     : Obj,
 	capacity: u32,            // The number of entries allocated
 	count   : u32,            // The number of entries in the map
-	entries : [^]Map_Entry,   // Pointer to a contiguous array of [capacity] entries
+	entries : [^]Map_Entry,   // Pointer to contiguous array of [capacity] entries
 }
 
 Obj_Range :: struct {
@@ -391,6 +389,17 @@ Obj_Range :: struct {
 	from        : f64,
 	to          : f64,
 	is_inclusive: bool,   // True if [to] is included in the range
+}
+
+object_to_value :: proc(obj: ^Obj) -> Value {
+	when NAN_TAGGING {
+		return Value(SIGN_BIT | QNAN | cast(u64)uintptr(obj))
+	} else {
+		value: Value
+		value.type = .Obj
+		value.as.obj = obj
+		return value
+	}
 }
 
 init_obj :: proc(vm: ^VM, obj: ^Obj, type: Obj_Type, class_obj: ^Obj_Class) {
@@ -434,4 +443,8 @@ bind_method :: proc(vm: ^VM, class_obj: ^Obj_Class, symbol: int, method: Method)
 		resize(&class_obj.methods, symbol + 1)
 	}
 	class_obj.methods[symbol] = method
+}
+
+new_class :: proc(vm: ^VM, superclass: ^Obj_Class, num_fields: int, name: ^Obj_String) {
+	unimplemented()
 }

@@ -119,44 +119,6 @@ when NAN_TAGGING {
 	TRUE_VAL :: Value(QNAN | TAG_TRUE)
 	UNDEFINED_VAL :: Value(QNAN | TAG_UNDEFINED)
 
-	// If the NaN bits are set, it's not a number
-	value_is_num :: proc "contextless" (value: Value) -> bool {
-		return (value & QNAN) != QNAN
-	}
-
-	// An object pointer is a NaN with a set sign bit
-	value_is_obj :: proc "contextless" (value: Value) -> bool {
-		return (value & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT)
-	}
-
-	value_is_false :: proc "contextless" (value: Value) -> bool {
-		return value == FALSE_VAL
-	}
-
-	value_is_true :: proc "contextless" (value: Value) -> bool {
-		return value == TRUE_VAL
-	}
-
-	value_is_null :: proc "contextless" (value: Value) -> bool {
-		return value == NULL_VAL
-	}
-
-	value_is_undefined :: proc "contextless" (value: Value) -> bool {
-		return value == UNDEFINED_VAL
-	}
-
-	value_as_object :: proc "contextless" (value: Value) -> ^Object {
-		return cast(^Object)cast(uintptr)(value & ~(SIGN_BIT | QNAN))
-	}
-
-	value_as_bool :: proc "contextless" (value: Value) -> bool {
-		return value == TRUE_VAL
-	}
-
-	values_same :: proc "contextless" (a, b: Value) -> bool {
-		return a == b
-	}
-
 } else {
 	Value_Kind :: enum {
 		False,
@@ -179,31 +141,83 @@ when NAN_TAGGING {
 	FALSE_VAL     := Value {Value_Kind.False, {}}
 	TRUE_VAL      := Value {Value_Kind.True, {}}
 	UNDEFINED_VAL := Value {Value_Kind.Undefined, {}}
+}
 
-	value_is_num :: proc "contextless" (value: Value) -> bool {
-		return value.kind == .Num
+// If the NaN bits are set, it's not a number
+value_is_num :: proc "contextless" (value: Value) -> bool {
+	when NAN_TAGGING do return (value & QNAN) != QNAN
+	else do return value.kind == .Num
+}
+
+// An object pointer is a NaN with a set sign bit
+value_is_obj :: proc "contextless" (value: Value) -> bool {
+	when NAN_TAGGING do return (value & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT)
+	else             do return value.kind == .Obj
+}
+
+value_is_false :: proc "contextless" (value: Value) -> bool {
+	when NAN_TAGGING do return value == FALSE_VAL
+	else             do return value.kind == .False
+}
+
+value_is_true :: proc "contextless" (value: Value) -> bool {
+	when NAN_TAGGING do return value == TRUE_VAL
+	else             do return value.kind == .True
+}
+
+value_is_null :: proc "contextless" (value: Value) -> bool {
+	when NAN_TAGGING do return value == NULL_VAL
+	else             do return value.kind == .Null
+}
+
+value_is_undefined :: proc "contextless" (value: Value) -> bool {
+	when NAN_TAGGING do return value == UNDEFINED_VAL
+	else             do return value.kind == .Undefined
+}
+
+value_as_object :: proc "contextless" (value: Value) -> ^Object {
+	return cast(^Object)cast(uintptr)(value & ~(SIGN_BIT | QNAN))
+}
+
+value_as_bool :: proc "contextless" (value: Value) -> bool {
+	return value == TRUE_VAL
+}
+
+values_same :: proc "contextless" (a, b: Value) -> bool {
+	return a == b
+}
+
+object_to_value :: proc(obj: ^Object) -> Value {
+	when NAN_TAGGING {
+		return Value(SIGN_BIT | QNAN | cast(u64)uintptr(obj))
+	} else {
+		value: Value
+		value.type = .Obj
+		value.as.obj = obj
+		return value
+	}
+}
+
+values_equal :: proc(a, b: Value) -> bool {
+	if values_same(a, b) do return true
+	
+	// If we get here, it's only possible for 2 heap-allocated immutable objects to be equal
+	if !value_is_obj(a) || !value_is_obj(b) do return false
+	a_obj := value_as_object(a)
+	b_obj := value_as_object(b)
+	if a_obj.type != b_obj.type do return false
+	#partial switch a_obj.type {
+	case .Range: 
+		a_range := cast(^Range)a_obj
+		b_range := cast(^Range)b_obj
+		return a_range.from == b_range.from && a_range.to == b_range.to && a_range.is_inclusive == b_range.is_inclusive
+	case .String:
+		a_str := cast(^String)a_obj
+		b_str := cast(^String)b_obj
+		return a_str.text == b_str.text
 	}
 
-	// An object pointer is a NaN with a set sign bit
-	value_is_obj :: proc "contextless" (value: Value) -> bool {
-		return value.kind == .Obj
-	}
-
-	value_is_false :: proc "contextless" (value: Value) -> bool {
-		return value.kind == .False
-	}
-
-	value_is_true :: proc "contextless" (value: Value) -> bool {
-		return value.kind == .True
-	}
-
-	value_is_null :: proc "contextless" (value: Value) -> bool {
-		return value.kind == .Null
-	}
-
-	value_is_undefined :: proc "contextless" (value: Value) -> bool {
-		return value.kind == .Undefined
-	}
+	return false
 }
 
 
@@ -252,38 +266,6 @@ Method :: struct {
 Foreign_Method_Fn :: #type proc "c"() // Todo(Implement)
 
 
-object_to_value :: proc(obj: ^Object) -> Value {
-	when NAN_TAGGING {
-		return Value(SIGN_BIT | QNAN | cast(u64)uintptr(obj))
-	} else {
-		value: Value
-		value.type = .Obj
-		value.as.obj = obj
-		return value
-	}
-}
-
-values_equal :: proc(a, b: Value) -> bool {
-	if values_same(a, b) do return true
-	
-	// If we get here, it's only possible for 2 heap-allocated immutable objects to be equal
-	if !value_is_obj(a) || !value_is_obj(b) do return false
-	a_obj := value_as_object(a)
-	b_obj := value_as_object(b)
-	if a_obj.type != b_obj.type do return false
-	#partial switch a_obj.type {
-	case .Range: 
-		a_range := cast(^Range)a_obj
-		b_range := cast(^Range)b_obj
-		return a_range.from == b_range.from && a_range.to == b_range.to && a_range.is_inclusive == b_range.is_inclusive
-	case .String:
-		a_str := cast(^String)a_obj
-		b_str := cast(^String)b_obj
-		return a_str.text == b_str.text
-	}
-
-	return false
-}
 
 
 

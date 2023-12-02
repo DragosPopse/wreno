@@ -148,3 +148,23 @@ object_init :: proc(vm: ^VM, obj: ^Object, type: Object_Type, class_obj: ^Class)
 	obj.next      = vm.first
 	vm.first      = obj
 }
+
+@private
+object_hash :: proc(object: ^Object) -> u32 {
+	#partial switch object.type {
+	case .Class:
+		return object_hash(&object.class_obj.name.obj) // Classes just use their name
+	case .Fn:
+		// allow bare minimum non-closure functions so that we can use a map to find existing constants in a function's constant table. This is only used internally. 
+		// Since user code never sees a non-closure function, they cannot use them as map keys
+		fn := cast(^Fn)object
+		return hash_number(cast(f64)fn.arity) ~ hash_number(cast(f64)len(fn.code))
+	case .Range:
+		range := cast(^Range)object
+		return hash_number(range.from) ~ hash_number(range.to)
+	case .String:
+		return (cast(^String)object).hash
+	case: panic("Only immutable objects can be hashed.")
+	}
+	return 0
+}

@@ -14,7 +14,7 @@ Map_Entry :: struct {
 
 
 
-new_map :: proc(vm: ^VM) -> ^Map {
+map_make :: proc(vm: ^VM) -> ^Map {
 	m := vm_allocate(vm, Map)
 	object_init(vm, &m.obj, .Map, vm.map_class)
 	m.entries = nil
@@ -38,30 +38,12 @@ hash_number :: #force_inline proc "contextless" (num: f64) -> u32 {
 	return hash_bits(transmute(u64)num)
 }
 
-@private
-hash_object :: proc(object: ^Object) -> u32 {
-	#partial switch object.type {
-	case .Class:
-		return hash_object(&object.class_obj.name.obj) // Classes just use their name
-	case .Fn:
-		// allow bare minimum non-closure functions so that we can use a map to find existing constants in a function's constant table. This is only used internally. 
-		// Since user code never sees a non-closure function, they cannot use them as map keys
-		fn := cast(^Fn)object
-		return hash_number(cast(f64)fn.arity) ~ hash_number(cast(f64)len(fn.code))
-	case .Range:
-		range := cast(^Range)object
-		return hash_number(range.from) ~ hash_number(range.to)
-	case .String:
-		return (cast(^String)object).hash
-	case: panic("Only immutable objects can be hashed.")
-	}
-	return 0
-}
+
 
 @private
 hash_value :: proc(value: Value) -> u32 {
 	when NAN_TAGGING {
-		if value_is_obj(value) do return hash_object(value_as_object(value))
+		if value_is_obj(value) do return object_hash(value_as_object(value))
 		return hash_bits(value)
 	} else {
 		#panic("Unimplemented hash_value for !NAN_TAGGING")

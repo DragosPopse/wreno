@@ -141,6 +141,7 @@ Map :: struct {
 	entries     : []Map_Entry,
 }
 
+@private
 object_init :: proc(vm: ^VM, obj: ^Object, type: Object_Type, class_obj: ^Class) {
 	obj.type      = type
 	obj.is_dark   = false

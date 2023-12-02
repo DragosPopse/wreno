@@ -4,9 +4,9 @@ package wren
 // Note(Dragos): figure out how to handle strings as non-null terminated, might be easier and nicer
 // Note(Dragos): Could this just be a raw builtin.string ?
 String :: struct {
-	#subtype obj : Object,
-	hash         : u32,
-	text         : string,
+	#subtype obj: Object,
+	hash        : u32,
+	text        : string,
 }
 
 // FNV-1a hash. See: http://www.isthe.com/chongo/tech/comp/fnv/
@@ -20,6 +20,6 @@ hash_text :: proc(text: string) -> u32 {
 }
 
 @private
-calculate_string_hash :: proc(str: ^String) {
+string_calculate_hash :: proc(str: ^String) {
 	str.hash = hash_text(str.text)
 }

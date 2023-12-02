@@ -239,9 +239,9 @@ Fn_Debug :: struct {
 
 
 Call_Frame :: struct {
-	ip         : ^byte,          // Pointer to the current (really next-to-be-executed) instruction in the function's bytecode. Note(Dragos): Can this be an index in the [dynamic]byte? Or a [^]?
+	ip         : ^byte,      // Pointer to the current (really next-to-be-executed) instruction in the function's bytecode. Note(Dragos): Can this be an index in the [dynamic]byte? Or a [^]?
 	closure    : ^Closure,   // The closure being executed
-	stack_start: ^Value,         // Pointer to the first stack slot used by this call frame. This will contain the receiver, followed by the function's parameters, then local variables and temporaries
+	stack_start: ^Value,     // Pointer to the first stack slot used by this call frame. This will contain the receiver, followed by the function's parameters, then local variables and temporaries
 }
 
 

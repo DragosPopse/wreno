@@ -12,6 +12,11 @@ Map_Entry :: struct {
 	value: Value,   // The value associated with the key. If the key is UNDEFINED_VAL, this will be false to indicate an open available entry or true to indicate a tombstone -- an entry that has previously in use but was then deleted
 }
 
+Map :: struct {
+	#subtype obj: Object,
+	count       : int,
+	entries     : []Map_Entry,
+}
 
 
 map_make :: proc(vm: ^VM) -> ^Map {
@@ -43,7 +48,7 @@ hash_number :: #force_inline proc "contextless" (num: f64) -> u32 {
 @private
 hash_value :: proc(value: Value) -> u32 {
 	when NAN_TAGGING {
-		if value_is_obj(value) do return object_hash(value_as_object(value))
+		if value_is_obj(value) do return object_hash(to_object(value))
 		return hash_bits(value)
 	} else {
 		#panic("Unimplemented hash_value for !NAN_TAGGING")
@@ -173,7 +178,7 @@ map_remove_key :: proc(vm: ^VM, m: ^Map, key: Value) -> Value {
 	value := entry.value
 	entry.key = UNDEFINED_VAL
 	entry.value = TRUE_VAL
-	if value_is_obj(value) do push_root(vm, value_as_object(value))
+	if value_is_obj(value) do push_root(vm, to_object(value))
 	defer if value_is_obj(value) do pop_root(vm)
 	m.count -= 1
 	if m.count == 0 do map_clear(vm, m)

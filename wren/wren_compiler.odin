@@ -252,7 +252,7 @@ keywords := [?]Keyword {
 }
 
 @private
-init_compiler :: proc(compiler: ^Compiler, parser: ^Parser, parent: ^Compiler, is_method: bool) {
+compiler_init :: proc(compiler: ^Compiler, parser: ^Parser, parent: ^Compiler, is_method: bool) {
 	compiler.parser = parser
 	compiler.parent = parent
 	compiler.loop = nil
@@ -289,6 +289,7 @@ init_compiler :: proc(compiler: ^Compiler, parser: ^Parser, parent: ^Compiler, i
 	}
 
 	compiler.num_attributes = 0
+	compiler.attributes = map_make(parser.vm)
 	unimplemented()
 }
 
@@ -348,9 +349,21 @@ add_constant :: proc(compiler: ^Compiler, constant: Value) -> int {
 	if compiler.parser.has_errors do return -1
 	// see if we already have a constant for the value, and reuse it if so
 	if compiler.constants != nil {
-		unimplemented()
+		existing := map_get(compiler.constants, constant)
+		if value_is_num(existing) do return cast(int)to_number(existing)
 	}
-	unimplemented()
+	if len(compiler.fn.constants) < cast(int)MAX_CONSTANTS {
+		if value_is_obj(constant) do push_root(compiler.parser.vm, to_object(constant))
+		append(&compiler.fn.constants, constant)
+		if value_is_obj(constant) do pop_root(compiler.parser.vm)
+		if compiler.constants == nil {
+			compiler.constants = map_make(compiler.parser.vm)
+		}
+		map_set(compiler.parser.vm, compiler.constants, constant, to_value(cast(f64)len(compiler.fn.constants) - 1))
+	} else {
+		error(compiler, "A function may only contain %d unique constants.", MAX_CONSTANTS)
+	}
+	return len(compiler.fn.constants) - 1
 }
 
 // Is valid non-initial identifier character
@@ -363,3 +376,4 @@ is_name :: proc(c: rune) -> bool {
 is_digit :: proc(c: rune) -> bool {
 	return c >= '0' && c <= '9'
 }
+

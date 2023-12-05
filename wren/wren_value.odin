@@ -175,19 +175,27 @@ value_is_undefined :: proc "contextless" (value: Value) -> bool {
 	else             do return value.kind == .Undefined
 }
 
-value_as_object :: proc "contextless" (value: Value) -> ^Object {
+to_object :: proc "contextless" (value: Value) -> ^Object {
 	return cast(^Object)cast(uintptr)(value & ~(SIGN_BIT | QNAN))
 }
 
-value_as_bool :: proc "contextless" (value: Value) -> bool {
+to_bool :: proc "contextless" (value: Value) -> bool {
 	return value == TRUE_VAL
+}
+
+to_number :: proc "contextless" (value: Value) -> f64 {
+	when NAN_TAGGING do return transmute(f64)value
 }
 
 values_same :: proc "contextless" (a, b: Value) -> bool {
 	return a == b
 }
 
-object_to_value :: proc(obj: ^Object) -> Value {
+to_value_number :: proc "contextless"(n: f64) -> Value {
+	when NAN_TAGGING do return transmute(u64)n
+}
+
+to_value_object :: proc(obj: ^Object) -> Value {
 	when NAN_TAGGING {
 		return Value(SIGN_BIT | QNAN | cast(u64)uintptr(obj))
 	} else {
@@ -198,13 +206,18 @@ object_to_value :: proc(obj: ^Object) -> Value {
 	}
 }
 
+to_value :: proc {
+	to_value_number,
+	to_value_object,
+}
+
 values_equal :: proc(a, b: Value) -> bool {
 	if values_same(a, b) do return true
 	
 	// If we get here, it's only possible for 2 heap-allocated immutable objects to be equal
 	if !value_is_obj(a) || !value_is_obj(b) do return false
-	a_obj := value_as_object(a)
-	b_obj := value_as_object(b)
+	a_obj := to_object(a)
+	b_obj := to_object(b)
 	if a_obj.type != b_obj.type do return false
 	#partial switch a_obj.type {
 	case .Range: 

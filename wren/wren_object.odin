@@ -95,11 +95,11 @@ Fiber_State :: enum {
 Fiber :: struct {
 	#subtype obj  : Object,
 	stack         : ^Value,                 // The stack of value slots. This is used for holding local variables and temporaries while the fiber is executing. It is heap-allocated and grown as needed
-	stack_top     : [^]Value,                 // A pointer to one past the top-most value of the stack
+	stack_top     : [^]Value,               // A pointer to one past the top-most value of the stack
 	stack_capacity: int,                    // The number of allocated slots in the stack array
 	frames        : [dynamic]^Call_Frame,   // The stack of call frames. Grows as needed but never shrinks
-	open_upvalues : ^Upvalue,           // Pointer to the first node in the linked list of open upvalues that are pointing to valeus still on the stack. The head of the list will be the upvalue closest to the top of the stack, and then the list works downwards
-	caller        : ^Fiber,             // The fiber that ran this one. IF this fiber is yielded, control will resume to this one. May be nil
+	open_upvalues : ^Upvalue,               // Pointer to the first node in the linked list of open upvalues that are pointing to valeus still on the stack. The head of the list will be the upvalue closest to the top of the stack, and then the list works downwards
+	caller        : ^Fiber,                 // The fiber that ran this one. IF this fiber is yielded, control will resume to this one. May be nil
 	error         : Value,                  // If the fiber failed because of a runtime error, this will contain the error object. Otherwise, it will be null 
 	state         : Fiber_State
 }
@@ -109,7 +109,7 @@ Class :: struct {
 	superclass  : ^Class,
 	num_fields  : int,               // The number of fields needed for an instance of this class, including all of its superclass fields
 	methods     : [dynamic]Method,   // The table of methods that are defined in or inherited by this class. Methods are called by the symbol, and the symbol directly maps to an index in this table. This makes method calls fast at the expense of empty cells in the list of methods the class doesn't support. You can think of it as a hash table that never has collisions but has a really low load factor. Since methods are pretty small (just a type and a pointer), this should be a worthwhile trade-off
-	name        : ^String,       // The name of the class
+	name        : ^String,           // The name of the class
 	attributes  : Value,             // The Class_Attributes for the class, if any
 }
 
@@ -135,11 +135,7 @@ Range :: struct {
 	is_inclusive: bool,   // True if [to] is included in the range
 }
 
-Map :: struct {
-	#subtype obj: Object,
-	count       : int,
-	entries     : []Map_Entry,
-}
+
 
 @private
 object_init :: proc(vm: ^VM, obj: ^Object, type: Object_Type, class_obj: ^Class) {

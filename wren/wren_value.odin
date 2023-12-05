@@ -150,12 +150,12 @@ value_is_num :: proc "contextless" (value: Value) -> bool {
 }
 
 // An object pointer is a NaN with a set sign bit
-value_is_obj :: proc "contextless" (value: Value) -> bool {
+is_object :: proc "contextless" (value: Value) -> bool {
 	when NAN_TAGGING do return (value & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT)
 	else             do return value.kind == .Obj
 }
 
-value_is_false :: proc "contextless" (value: Value) -> bool {
+is_false :: proc "contextless" (value: Value) -> bool {
 	when NAN_TAGGING do return value == FALSE_VAL
 	else             do return value.kind == .False
 }
@@ -165,12 +165,12 @@ value_is_true :: proc "contextless" (value: Value) -> bool {
 	else             do return value.kind == .True
 }
 
-value_is_null :: proc "contextless" (value: Value) -> bool {
+is_null :: proc "contextless" (value: Value) -> bool {
 	when NAN_TAGGING do return value == NULL_VAL
 	else             do return value.kind == .Null
 }
 
-value_is_undefined :: proc "contextless" (value: Value) -> bool {
+is_undefined :: proc "contextless" (value: Value) -> bool {
 	when NAN_TAGGING do return value == UNDEFINED_VAL
 	else             do return value.kind == .Undefined
 }
@@ -215,7 +215,7 @@ values_equal :: proc(a, b: Value) -> bool {
 	if values_same(a, b) do return true
 	
 	// If we get here, it's only possible for 2 heap-allocated immutable objects to be equal
-	if !value_is_obj(a) || !value_is_obj(b) do return false
+	if !is_object(a) || !is_object(b) do return false
 	a_obj := to_object(a)
 	b_obj := to_object(b)
 	if a_obj.type != b_obj.type do return false

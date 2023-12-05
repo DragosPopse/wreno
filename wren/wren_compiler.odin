@@ -353,9 +353,9 @@ add_constant :: proc(compiler: ^Compiler, constant: Value) -> int {
 		if value_is_num(existing) do return cast(int)to_number(existing)
 	}
 	if len(compiler.fn.constants) < cast(int)MAX_CONSTANTS {
-		if value_is_obj(constant) do push_root(compiler.parser.vm, to_object(constant))
+		if is_object(constant) do push_root(compiler.parser.vm, to_object(constant))
 		append(&compiler.fn.constants, constant)
-		if value_is_obj(constant) do pop_root(compiler.parser.vm)
+		if is_object(constant) do pop_root(compiler.parser.vm)
 		if compiler.constants == nil {
 			compiler.constants = map_make(compiler.parser.vm)
 		}

@@ -37,6 +37,6 @@ test_map :: proc(T: ^testing.T) {
 	}
 	{
 		val := map_get(m, key_unknown)
-		testing.expect(T, value_is_undefined(val), "Found value where we shouldn't")
+		testing.expect(T, is_undefined(val), "Found value where we shouldn't")
 	}
 }

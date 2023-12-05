@@ -48,7 +48,7 @@ hash_number :: #force_inline proc "contextless" (num: f64) -> u32 {
 @private
 hash_value :: proc(value: Value) -> u32 {
 	when NAN_TAGGING {
-		if value_is_obj(value) do return object_hash(to_object(value))
+		if is_object(value) do return object_hash(to_object(value))
 		return hash_bits(value)
 	} else {
 		#panic("Unimplemented hash_value for !NAN_TAGGING")
@@ -78,10 +78,10 @@ find_entry :: proc(entries: []Map_Entry, key: Value) -> (result: ^Map_Entry, fou
 
 	for { // Note(Dragos): This should be a do-while
 		entry := &entries[index]
-		if value_is_undefined(entry.key) {
+		if is_undefined(entry.key) {
 			// if we found an empty slot, the key is not in the table. 
 			// If we found a slot that contains a deleted key, we have to keep looking
-			if value_is_false(entry.value) {
+			if is_false(entry.value) {
 			// We found an empty slot, so we've reached the end of the probe
 			// sequence without finding the key. If we passed a tombstone, then
 			// that's where we should insert the item, otherwise, put it here at
@@ -139,7 +139,7 @@ resize_map :: proc(vm: ^VM, m: ^Map, capacity: u32) {
 		entry.value = FALSE_VAL
 	}
 	for entry in m.entries {
-		if value_is_undefined(entry.key) do continue
+		if is_undefined(entry.key) do continue
 		insert_entry(entries, entry.key, entry.value)
 	}
 	delete(m.entries, vm.config.allocator)
@@ -178,8 +178,8 @@ map_remove_key :: proc(vm: ^VM, m: ^Map, key: Value) -> Value {
 	value := entry.value
 	entry.key = UNDEFINED_VAL
 	entry.value = TRUE_VAL
-	if value_is_obj(value) do push_root(vm, to_object(value))
-	defer if value_is_obj(value) do pop_root(vm)
+	if is_object(value) do push_root(vm, to_object(value))
+	defer if is_object(value) do pop_root(vm)
 	m.count -= 1
 	if m.count == 0 do map_clear(vm, m)
 	else if len(m.entries) > MIN_CAPACITY && m.count < len(m.entries) / GROW_FACTOR * MAP_LOAD_PERCENT / 100 {

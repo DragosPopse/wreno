@@ -1,6 +1,7 @@
 package wren
 
 import "core:strings"
+import "core:mem"
 
 // Heap allocated string object
 // Note(Dragos): figure out how to handle strings as non-null terminated, might be easier and nicer
@@ -27,6 +28,7 @@ string_calculate_hash :: proc(str: ^String) {
 }
 
 // Todo(Dragos): The String.text should be allocated inline with String
+// Note(Dragos): We are also experimenting with not having null-terminated strings. This could potentailly not be good if we want other people to use our implementation from C with no additional changes to their code. We'll see
 string_make_from_odin_string :: proc(vm: ^VM, odin_string: string) -> ^String {
 	str := new(String, vm.config.allocator)
 	object_init(vm, str, .String, vm.string_class)

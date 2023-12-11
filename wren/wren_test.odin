@@ -6,6 +6,19 @@ import "core:fmt"
 import "core:runtime"
 import "core:intrinsics"
 
+WREN_SOURCE := #load("wren_core.wren", string)
+
+@test
+test_runes :: proc(T: ^testing.T) {
+	source := WREN_SOURCE
+	parser: Parser
+	parser.source = source
+	parser.line_count = 1
+	parser.next.kind = .ERROR
+	parser.next.value = UNDEFINED_VAL
+	for parser.ch != -1 do advance_rune(&parser)
+}
+
 @test
 test_vm :: proc(T: ^testing.T) {
 	vm := vm_new()

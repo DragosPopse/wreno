@@ -1,9 +1,11 @@
 package wren
 
-import "core:unicode"
-import "core:unicode/utf8"
 import "core:fmt"
 import "core:strings"
+import "core:unicode"
+import "core:unicode/utf8"
+
+// Todo(Dragos): split the compiler into multiple passes: tokenizing, parsing, compiling
 
 // The maximum number of local (i.e. not module level) variables that can be
 // declared in a single function, method, or chunk of top level code. This is
@@ -23,8 +25,8 @@ MAX_UPVALUES :: max(u8)
 // two-byte argument.
 MAX_CONSTANTS :: max(u16)
 
-// The maximum distance a CODE_JUMP or CODE_JUMP_IF instruction can move the
-// instruction pointer.
+// The maximum distance a  or CODE_JUMP_IF instruction can move the
+// instruction pointer.CODE_JUMP
 MAX_JUMP :: max(u16)
 
 // The maximum depth that interpolation can nest. For example, this string has
@@ -34,6 +36,7 @@ MAX_JUMP :: max(u16)
 MAX_INTERPOLATION_NESTING :: 8
 
 Token_Kind :: enum {
+	ERROR,
 	LEFT_PAREN,
 	RIGHT_PAREN,
 	LEFT_BRACKET,
@@ -116,7 +119,6 @@ Token_Kind :: enum {
 	
 	LINE,
 	
-	ERROR,
 	EOF,
 }
 
@@ -129,11 +131,14 @@ Token :: struct {
 
 Parser :: struct {
 	vm          : ^VM,
-	module      : ^Module,                      // The module being parsed
-	sourcce     : string,                           // The source code being parsed
-	token_start : string,                           // The beginning of the currently-being-lexed token in [source]
-	current_char: string,                           // The current character being lexed in [source] Note(dragos): this could be an int for the position?
-	current_line: int,                              // The 1-based line number of [current_char]
+	module      : ^Module,                          // The module being parsed
+	source      : string,                           // The source code being parsed
+	token_start : int,                              // The beginning of the currently-being-lexed token in [source]
+	ch          : rune,
+	offset      : int,
+	read_offset : int,
+	line_offset : int,
+	line_count  : int,
 	next        : Token,                            // Upcoming token
 	current     : Token,                            // Most recently lexed token
 	previous    : Token,                            // Most recently consumed/advanced token
@@ -165,11 +170,11 @@ Compiler :: struct {
 	num_slots      : int,                              // Number of slots (locals and temps) in use. We use this and max_slots to track the maximum number of additional slots a function may need while executing. When the funciton is called, the fiber will check to ensure it's stack has enough room to cover that worst case and grow the stack if needed. This value doesn't include parameters to the function, since those are already pushed onto the stack by the caller and tracked here, we don't need to double count them here.
 	loop           : ^Loop,                            // The current innermost loop being compiled, or nil if not in a loop
 	enclosing_class: ^Class_Info,                      // If this is a compiler for a method, keep track of the class enclosing it
-	fn             : ^Fn,                          // The function being compiled
-	constants      : ^Map,                         // The constants for the function being compiled
+	fn             : ^Fn,                              // The function being compiled
+	constants      : ^Map,                             // The constants for the function being compiled
 	is_initializer : bool,                             // Whether or not the compiler is for a constructor initializer
 	num_attributes : int,                              // The num of attributes seen while parsing. We track this separately as compile time attributes are not stored, so we can't rely on attributes.count to enforce an error message when attributes are used anywhere other than methods or classes
-	attributes     : ^Map,                         // Attributes for the next class or method
+	attributes     : ^Map,                             // Attributes for the next class or method
 }
 
 Scope :: enum {
@@ -290,7 +295,7 @@ compiler_init :: proc(compiler: ^Compiler, parser: ^Parser, parent: ^Compiler, i
 
 	compiler.num_attributes = 0
 	compiler.attributes = map_make(parser.vm)
-	unimplemented()
+	compiler.fn = fn_make(parser.vm, parser.module, compiler.num_locals)
 }
 
 @private
@@ -326,7 +331,7 @@ print_error :: proc(parser: ^Parser, line: int, label: string, format: string, a
 
 @private
 lex_error :: proc(parser: ^Parser, format: string, args: ..any) {
-	print_error(parser, parser.current_line, "Error", format, args)
+	print_error(parser, parser.line_count, "Error", format, args)
 }
 
 @private
@@ -350,7 +355,7 @@ add_constant :: proc(compiler: ^Compiler, constant: Value) -> int {
 	// see if we already have a constant for the value, and reuse it if so
 	if compiler.constants != nil {
 		existing := map_get(compiler.constants, constant)
-		if value_is_num(existing) do return cast(int)to_number(existing)
+		if is_number(existing) do return cast(int)to_number(existing)
 	}
 	if len(compiler.fn.constants) < cast(int)MAX_CONSTANTS {
 		if is_object(constant) do push_root(compiler.parser.vm, to_object(constant))
@@ -377,3 +382,283 @@ is_digit :: proc(c: rune) -> bool {
 	return c >= '0' && c <= '9'
 }
 
+compile :: proc(vm: ^VM, module: ^Module, source: string, is_expression: bool, print_errors: bool) -> ^Fn {
+	source := source
+	// skip utf-8 BOM
+	if utf8.rune_at(source, 0) == utf8.RUNE_BOM {
+		w := utf8.rune_size(utf8.RUNE_BOM)
+		source = source[w:]
+	}
+	parser: Parser
+	parser.vm           = vm
+	parser.module       = module
+	parser.source       = source
+	parser.line_count = 1
+	parser.num_parens   = 0
+	parser.print_errors = print_errors
+
+	parser.next.kind = .ERROR
+	parser.next.value = UNDEFINED_VAL
+	
+	unimplemented()
+}
+
+@private
+advance_rune :: proc(p: ^Parser) {
+	if p.read_offset < len(p.source) {
+		p.offset = p.read_offset
+		if p.ch == '\n' {
+			p.line_offset = p.offset
+			p.line_count += 1
+		}
+		r, w := rune(p.source[p.read_offset]), 1
+		switch {
+		case r == 0: lex_error(p, "Illegal character NUL")
+		case r >= utf8.RUNE_SELF:
+			r, w = utf8.decode_rune_in_string(p.source[p.read_offset:])
+			if r == utf8.RUNE_ERROR && w == 1 {
+				lex_error(p, "Illegal UTF-8 encoding")
+			} else if r == utf8.RUNE_BOM && p.offset > 0 {
+				lex_error(p, "Illegal byte order mask")
+			}
+		}
+		p.read_offset += w
+		p.ch = r
+	} else {
+		p.offset = len(p.source)
+		if p.ch == '\n' {
+			p.line_offset = p.offset
+			p.line_count += 1
+		}
+		p.ch = -1
+	}
+}
+
+match_char :: proc(parser: ^Parser, c: rune) -> bool {
+	if peek_rune(parser) != c do return false
+	advance_rune(parser)
+	return true
+}
+
+@private
+make_token :: proc(parser: ^Parser, kind: Token_Kind) {
+	parser.next.kind = kind
+	//Todo(Dragos): figure out token.text
+	parser.next.line = parser.line_offset
+	parser.next.text = parser.source[parser.token_start:parser.offset]
+	if kind == .LINE do parser.next.line -= 1
+}
+
+// If current == [c], make a token of type [two], else [one]
+@private
+two_char_token :: proc(parser: ^Parser, c: rune, two: Token_Kind, one: Token_Kind) {
+	make_token(parser, two if match_char(parser, c) else one)
+}
+
+@private
+peek_rune :: proc(p: ^Parser, offset := 0) -> rune {
+	if p.read_offset + offset < len(p.source) {
+		return utf8.rune_at_pos(p.source, p.read_offset + offset)
+	}
+	return 0
+}
+
+@private
+peek_byte :: proc(p: ^Parser, offset := 0) -> byte {
+	if p.read_offset + offset < len(p.source) {
+		return p.source[p.read_offset + offset]
+	}
+	return 0
+}
+
+@private
+next_token :: proc(parser: ^Parser) {
+	parser.previous, parser.current = parser.current, parser.next
+	if parser.next.kind == .EOF do return
+	if parser.current.kind == .EOF do return
+	parser.token_start = parser.offset
+	for parser.offset < len(parser.source) {
+		advance_rune(parser)
+		c := parser.ch
+		switch c {
+		case '(':
+			// If we are inside an interpolated expr, count the unmatched "("
+			if parser.num_parens > 0 do parser.parens[parser.num_parens - 1] += 1
+			make_token(parser, .LEFT_PAREN)
+			return // Note(Dragos): in a multipass compiler, we would store these in an array
+
+		case ')':
+			if parser.num_parens > 0 {
+				parser.parens[parser.num_parens - 1] -= 1
+				if parser.parens[parser.num_parens - 1] == 0 {
+					// This is the final ')', so the interpolation expr has ended, thus beginning the next seection of the template string
+					parser.num_parens -= 1
+					read_string(parser)
+					return
+				}
+				make_token(parser, .RIGHT_PAREN)
+				return
+			}
+		case '[':
+			make_token(parser, .LEFT_BRACKET)
+			return
+		case ']':
+			make_token(parser, .RIGHT_BRACKET)
+			return
+		case '{':
+			make_token(parser, .LEFT_BRACE)
+			return
+		case '}':
+			make_token(parser, .RIGHT_BRACE)
+			return
+		case ':':
+			make_token(parser, .COLON)
+			return
+		case ',':
+			make_token(parser, .COMMA)
+			return
+		case '*':
+			make_token(parser, .STAR)
+			return
+		case '%':
+			make_token(parser, .PERCENT)
+		case '#':
+			// ignore shebang on the first line
+			if parser.line_count == 1 && peek_byte(parser) == '!' && peek_byte(parser, 1) == '/' {
+				skip_line_comment(parser)
+				break
+			}
+			make_token(parser, .HASH)
+			return
+		case '^':
+			make_token(parser, .CARET)
+			return
+		case '+':
+			make_token(parser, .PLUS)
+			return
+		case '-':
+			make_token(parser, .MINUS)
+			return
+		case '~':
+			make_token(parser, .TILDE)
+			return
+		case '?':
+			make_token(parser, .QUESTION)
+			return
+		case '|':
+			two_char_token(parser, '|', .PIPEPIPE, .PIPE)
+			return
+		case '&':
+			two_char_token(parser, '&', .AMPAMP, .AMP)
+			return
+		case '=':
+			two_char_token(parser, '=', .EQEQ, .EQ)
+			return
+		case '!':
+			two_char_token(parser, '=', .BANGEQ, .BANG)
+			return
+		case '.':
+			if match_char(parser, '.') {
+				two_char_token(parser, '.', .DOTDOTDOT, .DOTDOT)
+				return
+			}
+			make_token(parser, .DOT)
+			return
+		case '/':
+			if match_char(parser, '/') {
+				skip_line_comment(parser)
+				break
+			}
+			if match_char(parser, '*') {
+				skip_line_comment(parser)
+				break
+			}
+			make_token(parser, .SLASH)
+			return
+		case '<':
+			if match_char(parser, '<') do make_token(parser, .LTLT)
+			else do two_char_token(parser, '=', .LTEQ, .LT)
+			return
+		case '>':
+			if match_char(parser, '>') do make_token(parser, .GTGT)
+			else do two_char_token(parser, '=', .GTEQ, .GT)
+			return
+		case '\n':
+			make_token(parser, .LINE)
+			return
+		case ' ', '\r', '\t':
+			// Skip forward until we run out of whitespace
+			for c := peek_byte(parser); c == ' ' || c == '\r' || c == '\t'; c = peek_byte(parser) {
+				advance_rune(parser)
+			}
+		case '"':
+			if peek_byte(parser) == '"' && peek_byte(parser, 1) == '"' {
+				read_raw_string(parser)
+				return
+			}
+			read_string(parser)
+			return
+		case '_':
+			read_name(parser, .STATIC_FIELD if peek_byte(parser) == '_' else .FIELD, c)
+		case '0':
+			if peek_byte(parser) == 'x' {
+				read_hex_number(parser)
+				return
+			}
+			read_number(parser)
+			return
+		case:
+			if is_name(c) {
+				read_name(parser, .NAME, c)
+			} else if is_digit(c) {
+				read_number(parser)
+			} else {
+				if c >= 32 && c <= 126 {
+					lex_error(parser, "Invalid character '%c'.", c)
+				} else {
+					// Note(Dragos): This isn't entirely accurate anymore, since we are trying to utf8 decode it... let's see how things behave in testing
+					// Don't show non-ASCII values since we didn't UTF-8 decode the
+					// bytes. Since there are no non-ASCII byte values that are
+					// meaningful code units in Wren, the lexer works on raw bytes,
+					// even though the source code and console output are UTF-8.
+					lex_error(parser, "Invalid byte 0x%x.", u8(c))
+				}
+				parser.next.kind = .ERROR
+			}
+			return
+		}
+	}
+	// If we get here, we're out of source, so just make EOF tokens
+	parser.token_start = parser.offset // Note(Dragos): is this correct?
+	make_token(parser, .EOF)
+}
+
+@private
+skip_line_comment :: proc(parser: ^Parser) {
+
+}
+
+@private
+read_raw_string :: proc(parser: ^Parser) {
+
+}
+
+@private
+read_name :: proc(parser: ^Parser, kind: Token_Kind, first_char: rune) {
+
+}
+
+@private
+read_hex_number :: proc(parser: ^Parser) {
+
+}
+
+@private
+read_number :: proc(parser: ^Parser) {
+
+}
+
+@private
+read_string :: proc(parser: ^Parser) {
+
+}

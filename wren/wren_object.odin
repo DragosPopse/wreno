@@ -165,3 +165,18 @@ object_hash :: proc(object: ^Object) -> u32 {
 	}
 	return 0
 }
+
+fn_make :: proc(vm: ^VM, module: ^Module, max_slots: int) -> ^Fn {
+	debug := vm_allocate(vm, Fn_Debug)
+	debug.name = ""
+	debug.source_lines = make([dynamic]int, vm.config.allocator)
+	fn := vm_allocate(vm, Fn)
+	object_init(vm, fn, .Fn, vm.fn_class)
+	fn.constants = make([dynamic]Value, vm.config.allocator)
+	fn.code = make([dynamic]byte, vm.config.allocator)
+	fn.module = module
+	fn.max_slots = max_slots
+	fn.arity = 0
+	fn.debug = debug
+	return fn
+}

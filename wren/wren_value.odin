@@ -144,7 +144,7 @@ when NAN_TAGGING {
 }
 
 // If the NaN bits are set, it's not a number
-value_is_num :: proc "contextless" (value: Value) -> bool {
+is_number :: proc "contextless" (value: Value) -> bool {
 	when NAN_TAGGING do return (value & QNAN) != QNAN
 	else do return value.kind == .Num
 }
@@ -160,7 +160,7 @@ is_false :: proc "contextless" (value: Value) -> bool {
 	else             do return value.kind == .False
 }
 
-value_is_true :: proc "contextless" (value: Value) -> bool {
+is_true :: proc "contextless" (value: Value) -> bool {
 	when NAN_TAGGING do return value == TRUE_VAL
 	else             do return value.kind == .True
 }
@@ -277,10 +277,6 @@ Method :: struct {
 }
 
 Foreign_Method_Fn :: #type proc "c"() // Todo(Implement)
-
-
-
-
 
 new_single_class :: proc(vm: ^VM, num_fields: int, name: ^String) -> ^Class {
 	class_obj := vm_allocate(vm, Class)

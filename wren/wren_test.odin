@@ -16,8 +16,23 @@ test_runes :: proc(T: ^testing.T) {
 	parser.line_count = 1
 	parser.next.kind = .ERROR
 	parser.next.value = UNDEFINED_VAL
-	for parser.ch != -1 do advance_rune(&parser)
+	for parser.ch != -1 {
+		advance_rune(&parser)
+	}
 }
+
+@test
+test_tokens :: proc(T: ^testing.T) {
+	source := WREN_SOURCE
+	vm := vm_new()
+	parser: Parser
+	parser.source = source
+	parser.line_count = 1
+	parser.next.kind = .ERROR
+	parser.next.value = UNDEFINED_VAL
+	
+}
+
 
 @test
 test_vm :: proc(T: ^testing.T) {

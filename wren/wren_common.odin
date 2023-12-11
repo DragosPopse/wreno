@@ -61,6 +61,3 @@ Interpret_Result :: enum {
 	Compile_Error,
 	Runtime_Error,
 }
-
-Error_Proc :: #type proc(vm: ^VM, type: Error_Type, module: string, line: int, message: string)
-Write_Proc :: #type proc(vm: ^VM, text: string)

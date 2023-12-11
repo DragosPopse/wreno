@@ -33,6 +33,7 @@ default_config :: proc() -> (config: Config) {
 	config.min_heap_size       = DEFAULT_MIN_HEAP_SIZE
 	config.heap_growth_percent = DEFAULT_HEAP_GROWTH_PERCENT
 	config.error               = default_error_proc
+	config.write               = default_write_proc
 	return config
 }
 

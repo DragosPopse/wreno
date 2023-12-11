@@ -11,6 +11,9 @@
 !build/**
 !wren/**
 
+!tests/**
+!examples/**
+
 # Root
 !ORIGINAL_LICENSE
 !LICENSE

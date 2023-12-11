@@ -481,3 +481,6 @@ class ClassAttributes {
   }
   toString { "attributes:%(_attributes) methods:%(_methods)" }
 }
+
+var a = 32
+var str = "a is %(a)"

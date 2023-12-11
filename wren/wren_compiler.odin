@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:strings"
 import "core:unicode"
 import "core:unicode/utf8"
+import "core:strconv"
 
 // Todo(Dragos): split the compiler into multiple passes: tokenizing, parsing, compiling
 
@@ -635,7 +636,35 @@ next_token :: proc(parser: ^Parser) {
 
 @private
 skip_line_comment :: proc(parser: ^Parser) {
+	for c := peek_rune(parser); c != '\n' && c != 0; c = peek_rune(parser) {
+		advance_rune(parser)
+	}
+}
 
+// Note(Dragos): skipping comments may not be desireable in an AST generation
+@private
+skip_block_comment :: proc(parser: ^Parser) {
+	nesting := 1
+	for nesting > 0 {
+		if peek_rune(parser) == 0 {
+			lex_error(parser, "Unterminated block comment.")
+			return
+		}
+		// Note(Dragos): peek_rune with an offset is not entirely correct
+		if peek_rune(parser) == '/' && peek_rune(parser, 1) == '*' {
+			advance_rune(parser)
+			advance_rune(parser)
+			nesting += 1
+			continue
+		}
+		if peek_rune(parser) == '*' && peek_rune(parser, 1) == '/' {
+			advance_rune(parser)
+			advance_rune(parser)
+			nesting -= 1
+			continue
+		}
+		advance_rune(parser) // regular comment character
+	}
 }
 
 @private
@@ -645,7 +674,24 @@ read_raw_string :: proc(parser: ^Parser) {
 
 @private
 read_name :: proc(parser: ^Parser, kind: Token_Kind, first_char: rune) {
-
+	kind := kind
+	sb := strings.builder_make(context.temp_allocator)
+	strings.write_rune(&sb, first_char)
+	// Todo(Dragos): rethink peeking, constantly decoding utf8 is not cool
+	for is_name(peek_rune(parser)) || is_digit(peek_rune(parser)) {
+		c := parser.ch
+		advance_rune(parser)
+		strings.write_rune(&sb, c)
+	}
+	identifier := strings.to_string(sb)
+	for keyword in keywords {
+		if keyword.identifier == identifier {
+			kind = keyword.token_kind
+			break
+		}
+	}
+	parser.next.value = to_value(string_make_from_odin_string(parser.vm, identifier))
+	make_token(parser, kind)
 }
 
 @private

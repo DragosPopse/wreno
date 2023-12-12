@@ -7,30 +7,25 @@ import "core:runtime"
 import "core:intrinsics"
 
 WREN_SOURCE := #load("wren_core.wren", string)
+HELLO_SOURCE := #load("../examples/hello.wren", string)
 
 @test
 test_runes :: proc(T: ^testing.T) {
 	source := WREN_SOURCE
-	parser: Parser
-	parser.source = source
-	parser.line_count = 1
-	parser.next.kind = .ERROR
-	parser.next.value = UNDEFINED_VAL
-	for parser.ch != -1 {
-		advance_rune(&parser)
-	}
 }
 
 @test
 test_tokens :: proc(T: ^testing.T) {
-	source := WREN_SOURCE
+	source := HELLO_SOURCE
 	vm := vm_new()
-	parser: Parser
-	parser.source = source
-	parser.line_count = 1
-	parser.next.kind = .ERROR
-	parser.next.value = UNDEFINED_VAL
-	
+	tokenizer: Tokenizer // Note(Dragos): Maybedge the tokenizer shouldn't need the VM
+	tokenizer.source = source
+	tokenizer.vm = vm
+	tokenizer.line_count = 1
+	//advance_rune(&tokenizer)
+	for token in scan(&tokenizer) {
+		fmt.printf("%v:[%v] - '%v'\n", token.line, token.kind, token.text)
+	}
 }
 
 

@@ -36,108 +36,16 @@ MAX_JUMP :: max(u16)
 //      "outside %(one + "%(two + "%(three)")")"
 MAX_INTERPOLATION_NESTING :: 8
 
-Token_Kind :: enum {
-	ERROR,
-	LEFT_PAREN,
-	RIGHT_PAREN,
-	LEFT_BRACKET,
-	RIGHT_BRACKET,
-	LEFT_BRACE,
-	RIGHT_BRACE,
-	COLON,
-	DOT,
-	DOTDOT,
-	DOTDOTDOT,
-	COMMA,
-	STAR,
-	SLASH,
-	PERCENT,
-	HASH,
-	PLUS,
-	MINUS,
-	LTLT,
-	GTGT,
-	PIPE,
-	PIPEPIPE,
-	CARET,
-	AMP,
-	AMPAMP,
-	BANG,
-	TILDE,
-	QUESTION,
-	EQ,
-	LT,
-	GT,
-	LTEQ,
-	GTEQ,
-	EQEQ,
-	BANGEQ,
 
-	BREAK,
-	CONTINUE,
-	CLASS,
-	CONSTRUCT,
-	ELSE,
-	FALSE,
-	FOR,
-	FOREIGN,
-	IF,
-	IMPORT,
-	AS,
-	IN,
-	IS,
-	NULL,
-	RETURN,
-	STATIC,
-	SUPER,
-	THIS,
-	TRUE,
-	VAR,
-	WHILE,
-
-	FIELD,
-	STATIC_FIELD,
-	NAME,
-	NUMBER,
-	
-	// A string literal without any interpolation, or the last section of a
-	// string following the last interpolated expression.
-	STRING,
-	
-	// A portion of a string literal preceding an interpolated expression. This
-	// string:
-	//
-	//     "a %(b) c %(d) e"
-	//
-	// is tokenized to:
-	//
-	//     TOKEN_INTERPOLATION "a "
-	//     TOKEN_NAME          b
-	//     TOKEN_INTERPOLATION " c "
-	//     TOKEN_NAME          d
-	//     TOKEN_STRING        " e"
-	INTERPOLATION,
-	
-	LINE,
-	
-	EOF,
-}
-
-Token :: struct {
-	kind : Token_Kind,
-	text : string,       // Points directly into the source
-	line : int,          // 1-based line where the token appears
-	value: Value,        // The parsed value if the token is a literal
-}
 
 Parser :: struct {
 	vm          : ^VM,
 	module      : ^Module,                          // The module being parsed
 	source      : string,                           // The source code being parsed
 	token_start : int,                              // The beginning of the currently-being-lexed token in [source]
-	ch          : rune,
-	offset      : int,
-	read_offset : int,
+	ch          : rune,                             // The current rune that was advanced 
+	offset      : int,                              // The offset of [ch] in [source]
+	read_offset : int,                              // The offset of the next rune
 	line_offset : int,
 	line_count  : int,
 	next        : Token,                            // Upcoming token
@@ -228,34 +136,7 @@ Signature :: struct {
 	arity: int,
 }
 
-Keyword :: struct {
-	identifier: string,
-	token_kind: Token_Kind,
-}
 
-keywords := [?]Keyword {
-	{"break", .BREAK},
-	{"continue", .CONTINUE},
-	{"class", .CLASS},
-	{"construct", .CONSTRUCT},
-	{"else", .ELSE},
-	{"false", .FALSE},
-	{"for", .FOR},
-	{"foreign", .FOREIGN},
-	{"if", .IF},
-	{"import", .IMPORT},
-	{"as", .AS},
-	{"in", .IN},
-	{"is", .IS},
-	{"null", .NULL},
-	{"return", .RETURN},
-	{"static", .STATIC},
-	{"super", .SUPER},
-	{"this", .THIS},
-	{"true", .TRUE},
-	{"var", .VAR},
-	{"while", .WHILE},
-}
 
 @private
 compiler_init :: proc(compiler: ^Compiler, parser: ^Parser, parent: ^Compiler, is_method: bool) {
@@ -330,16 +211,12 @@ print_error :: proc(parser: ^Parser, line: int, label: string, format: string, a
 	parser.vm.config.error(parser.vm, .Compile, module_name, line, err_string)
 }
 
-@private
-lex_error :: proc(parser: ^Parser, format: string, args: ..any) {
-	print_error(parser, parser.line_count, "Error", format, args)
-}
 
 @private
 error :: proc(compiler: ^Compiler, format: string, args: ..any) {
 	token := compiler.parser.previous
-	if token.kind == .ERROR do return // If the parse error was caused by an error token, the lexer has already reported it
-	if token.kind == .LINE {
+	if token.kind == .Error do return // If the parse error was caused by an error token, the lexer has already reported it
+	if token.kind == .Line {
 		print_error(compiler.parser, token.line, "Error at newline", format, args)
 	} else if token.kind == .EOF {
 		print_error(compiler.parser, token.line, "Error at end of file", format, args)
@@ -372,16 +249,7 @@ add_constant :: proc(compiler: ^Compiler, constant: Value) -> int {
 	return len(compiler.fn.constants) - 1
 }
 
-// Is valid non-initial identifier character
-@private
-is_name :: proc(c: rune) -> bool {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
-}
 
-@private
-is_digit :: proc(c: rune) -> bool {
-	return c >= '0' && c <= '9'
-}
 
 compile :: proc(vm: ^VM, module: ^Module, source: string, is_expression: bool, print_errors: bool) -> ^Fn {
 	source := source
@@ -398,46 +266,16 @@ compile :: proc(vm: ^VM, module: ^Module, source: string, is_expression: bool, p
 	parser.num_parens   = 0
 	parser.print_errors = print_errors
 
-	parser.next.kind = .ERROR
+	parser.next.kind = .Error
 	parser.next.value = UNDEFINED_VAL
 	
 	unimplemented()
 }
 
-@private
-advance_rune :: proc(p: ^Parser) {
-	if p.read_offset < len(p.source) {
-		p.offset = p.read_offset
-		if p.ch == '\n' {
-			p.line_offset = p.offset
-			p.line_count += 1
-		}
-		r, w := rune(p.source[p.read_offset]), 1
-		switch {
-		case r == 0: lex_error(p, "Illegal character NUL")
-		case r >= utf8.RUNE_SELF:
-			r, w = utf8.decode_rune_in_string(p.source[p.read_offset:])
-			if r == utf8.RUNE_ERROR && w == 1 {
-				lex_error(p, "Illegal UTF-8 encoding")
-			} else if r == utf8.RUNE_BOM && p.offset > 0 {
-				lex_error(p, "Illegal byte order mask")
-			}
-		}
-		p.read_offset += w
-		p.ch = r
-	} else {
-		p.offset = len(p.source)
-		if p.ch == '\n' {
-			p.line_offset = p.offset
-			p.line_count += 1
-		}
-		p.ch = -1
-	}
-}
 
 match_char :: proc(parser: ^Parser, c: rune) -> bool {
 	if peek_rune(parser) != c do return false
-	advance_rune(parser)
+	//advance_rune(parser)
 	return true
 }
 
@@ -445,9 +283,9 @@ match_char :: proc(parser: ^Parser, c: rune) -> bool {
 make_token :: proc(parser: ^Parser, kind: Token_Kind) {
 	parser.next.kind = kind
 	//Todo(Dragos): figure out token.text
-	parser.next.line = parser.line_offset
-	parser.next.text = parser.source[parser.token_start:parser.offset]
-	if kind == .LINE do parser.next.line -= 1
+	parser.next.line = parser.line_count
+	parser.next.text = parser.source[parser.token_start:parser.read_offset]
+	//if kind == .LINE do parser.next.line -= 1
 }
 
 // If current == [c], make a token of type [two], else [one]
@@ -464,14 +302,9 @@ peek_rune :: proc(p: ^Parser, offset := 0) -> rune {
 	return 0
 }
 
-@private
-peek_byte :: proc(p: ^Parser, offset := 0) -> byte {
-	if p.read_offset + offset < len(p.source) {
-		return p.source[p.read_offset + offset]
-	}
-	return 0
-}
 
+
+/*
 @private
 next_token :: proc(parser: ^Parser) {
 	parser.previous, parser.current = parser.current, parser.next
@@ -589,7 +422,7 @@ next_token :: proc(parser: ^Parser) {
 			return
 		case ' ', '\r', '\t':
 			// Skip forward until we run out of whitespace
-			for c := peek_byte(parser); c == ' ' || c == '\r' || c == '\t'; c = peek_byte(parser) {
+			for parser.ch == ' ' || parser.ch == '\r' || parser.ch == '\t' {
 				advance_rune(parser)
 			}
 		case '"':
@@ -636,7 +469,7 @@ next_token :: proc(parser: ^Parser) {
 
 @private
 skip_line_comment :: proc(parser: ^Parser) {
-	for c := peek_rune(parser); c != '\n' && c != 0; c = peek_rune(parser) {
+	for c := peek_byte(parser); c != '\n' && c != 0; c = peek_byte(parser) {
 		advance_rune(parser)
 	}
 }
@@ -646,18 +479,18 @@ skip_line_comment :: proc(parser: ^Parser) {
 skip_block_comment :: proc(parser: ^Parser) {
 	nesting := 1
 	for nesting > 0 {
-		if peek_rune(parser) == 0 {
+		if peek_byte(parser) == 0 {
 			lex_error(parser, "Unterminated block comment.")
 			return
 		}
 		// Note(Dragos): peek_rune with an offset is not entirely correct
-		if peek_rune(parser) == '/' && peek_rune(parser, 1) == '*' {
+		if peek_byte(parser) == '/' && peek_byte(parser, 1) == '*' {
 			advance_rune(parser)
 			advance_rune(parser)
 			nesting += 1
 			continue
 		}
-		if peek_rune(parser) == '*' && peek_rune(parser, 1) == '/' {
+		if peek_byte(parser) == '*' && peek_byte(parser, 1) == '/' {
 			advance_rune(parser)
 			advance_rune(parser)
 			nesting -= 1
@@ -666,19 +499,21 @@ skip_block_comment :: proc(parser: ^Parser) {
 		advance_rune(parser) // regular comment character
 	}
 }
+*/
 
 @private
 read_raw_string :: proc(parser: ^Parser) {
 
 }
 
+/*
 @private
 read_name :: proc(parser: ^Parser, kind: Token_Kind, first_char: rune) {
 	kind := kind
 	sb := strings.builder_make(context.temp_allocator)
 	strings.write_rune(&sb, first_char)
 	// Todo(Dragos): rethink peeking, constantly decoding utf8 is not cool
-	for is_name(peek_rune(parser)) || is_digit(peek_rune(parser)) {
+	for is_name(cast(rune)peek_byte(parser)) || is_digit(cast(rune)peek_byte(parser)) {
 		c := parser.ch
 		advance_rune(parser)
 		strings.write_rune(&sb, c)
@@ -693,18 +528,51 @@ read_name :: proc(parser: ^Parser, kind: Token_Kind, first_char: rune) {
 	parser.next.value = to_value(string_make_from_odin_string(parser.vm, identifier))
 	make_token(parser, kind)
 }
+*/
 
 @private
 read_hex_number :: proc(parser: ^Parser) {
 
 }
 
+/*
 @private
 read_number :: proc(parser: ^Parser) {
+	for is_digit(peek_rune(parser)) {
+		advance_rune(parser)
+	}
+	if peek_byte(parser) == '.' && is_digit(cast(rune)peek_byte(parser, 1)) {
+		advance_rune(parser)
+		for is_digit(peek_rune(parser)) do advance_rune(parser)
+	}
 
+	// Todo(dragos): Scientific notation
+	make_number(parser, false)
+}
+*/
+
+/*
+@private
+make_number :: proc(parser: ^Parser, is_hex: bool) {
+	num_str := parser.source[parser.token_start:parser.offset]
+	num: f64
+	ok: bool
+	if is_hex {
+		int_num: int
+		int_num, ok = strconv.parse_int(num_str, 16)
+		num := cast(f64)int_num
+	} else {
+		num, ok = strconv.parse_f64(num_str)
+	}
+	if !ok {
+		lex_error(parser, "Failed to parse %v", num)
+		parser.next.value = to_value(0)
+	}
+	make_token(parser, .NUMBER)
 }
 
 @private
 read_string :: proc(parser: ^Parser) {
 
 }
+*/

@@ -26,7 +26,7 @@ Token_Kind :: enum {
 	Plus,
 	Minus,
 	Lt_Lt,
-	Gtgt,
+	Gt_Gt,
 	Pipe,
 	Pipe_Pipe,
 	Caret,
@@ -89,6 +89,9 @@ Token_Kind :: enum {
 	Interpolation,
 	
 	Line,
+
+	// Note(Dragos): we'll try to add comments as tokens too, will be useful
+	Comment,
 	
 	EOF,
 }
@@ -181,6 +184,13 @@ advance_rune :: proc(t: ^Tokenizer) {
 	}
 }
 
+@private
+advance_if_next :: proc(t: ^Tokenizer, next_c: rune) -> bool {
+	if cast(rune)peek_byte(t) != next_c do return false
+	advance_rune(t)
+	return true
+}
+
 Keyword :: struct {
 	identifier: string,
 	token_kind: Token_Kind,
@@ -218,12 +228,27 @@ peek_byte :: proc(t: ^Tokenizer, offset := 0) -> byte {
 	return 0
 }
 
-skip_line_comment :: proc(t: ^Tokenizer) {
+@private
+scan_line_comment :: proc(t: ^Tokenizer) {
 	for t.ch != '\n' do advance_rune(t)
 }
 
+@private
+scan_block_comment :: proc(t: ^Tokenizer) {
+
+}
+
+@private
+scan_maybe_two_char_token :: proc(t: ^Tokenizer, next_c: rune, if_next_match: Token_Kind, if_next_not_match: Token_Kind) -> Token_Kind {
+	if cast(rune)peek_byte(t) == next_c {
+		advance_rune(t)
+		return if_next_match
+	}
+	return if_next_not_match
+}
+
 scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
-	advance_rune(t)
+	advance_rune(t) // Note(Dragos): Should we only advance rune when at the beginning of it? Let's see later...
 	skip_whitespace(t)
 	offset := t.offset
 	token = default_token()
@@ -261,46 +286,58 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 			}
 			token.kind = .Right_Paren
 		}
-	case '[':
-		token.kind = .Left_Bracket
-	case ']':
-		token.kind = .Right_Bracket
-	case '{':
-		token.kind = .Left_Brace
-	case '}':
-		token.kind = .Right_Brace
-	case ':':
-		token.kind = .Colon
-	case ',':
-		token.kind = .Comma
-	case '*':
-		token.kind = .Star
-	case '%':
-		token.kind = .Percent
+	case '[': token.kind = .Left_Bracket
+	case ']': token.kind = .Right_Bracket
+	case '{': token.kind = .Left_Brace
+	case '}': token.kind = .Right_Brace
+	case ':': token.kind = .Colon
+	case ',': token.kind = .Comma
+	case '*': token.kind = .Star
+	case '%': token.kind = .Percent
 	case '#':
 		// ignore shebang on the first line
 		if t.line_count == 1 && peek_byte(t) == '!' && peek_byte(t, 1) == '/' {
-			skip_line_comment(t)
+			scan_line_comment(t)
 			break
 		}
 		token.kind = .Hash
+
 	case '^': token.kind = .Caret
 	case '+': token.kind = .Plus
 	case '-': token.kind = .Minus
 	case '~': token.kind = .Tilde
 	case '?': token.kind = .Question
-	case '=':
-		token.kind = .Eq
-		if peek_byte(t) == '=' {
+	case '|': token.kind = scan_maybe_two_char_token(t, '|', .Pipe_Pipe, .Pipe)
+	case '&': token.kind = scan_maybe_two_char_token(t, '&', .Amp_Amp, .Amp)
+	case '=': token.kind = scan_maybe_two_char_token(t, '=', .Eq_Eq, .Eq)
+	case '!': token.kind = scan_maybe_two_char_token(t, '=', .Bang_Eq, .Bang)
+
+	case '.':
+		token.kind = .Dot
+		if peek_byte(t) == '.' {
 			advance_rune(t)
-			token.kind = .Eq_Eq
+			token.kind = scan_maybe_two_char_token(t, '.', .Dot_Dot_Dot, .Dot_Dot)
 		}
-	case '|':
-		token.kind = .Pipe
-		if peek_byte(t) == '|' {
-			advance_rune(t)
-			token.kind = .Pipe_Pipe
+
+	case '/':
+		token.kind = .Slash
+		if advance_if_next(t, '/') {
+			scan_line_comment(t)
+		} else if advance_if_next(t, '*') {
+			scan_block_comment(t)
 		}
+
+	case '<':
+		if advance_if_next(t, '<') do token.kind = .Lt_Lt
+		else do token.kind = scan_maybe_two_char_token(t, '=', .Lt_Eq, .Lt)
+
+	case '>':
+		if advance_if_next(t, '>') do token.kind = .Gt_Gt
+		else do token.kind = scan_maybe_two_char_token(t, '=', .Gt_Eq, .Gt)
+	
+	case '\n':
+		token.kind = .Line // Note(Dragos): How is this handled in comment blocks?
+
 	}
 	
 	if token.text == "" {
@@ -318,9 +355,13 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 @private
 scan_name :: proc(t: ^Tokenizer) -> (name: string, kind: Token_Kind) {
 	offset := t.offset
+	kind = .Name
+	if t.ch == '_' {
+		kind = .Field
+		if peek_byte(t) == '_' do kind = .Static_Field
+	}
 	for is_name(t.ch) || is_digit(t.ch) do advance_rune(t)
 	name = t.source[offset : t.offset]
-	kind = .Name
 	for keyword in keywords do if keyword.identifier == name {
 		return name, keyword.token_kind // Note(dragos): should we return the name in source here, or the keyword directly?
 	}
@@ -342,7 +383,7 @@ scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 		if !is_digit(t.ch) do lex_error(t, "Undetermined scientific notation.")
 		for is_digit(t.ch) do advance_rune(t)
 	}
-	// Todo(dragos): handle scientific. Handle minus. Convert the token to a Value literal
+	// Todo(dragos): handle scientific. Handle minus (or not, it's an operator?). Convert the token to a Value literal
 	return t.source[offset : t.offset], UNDEFINED_VAL
 }
 

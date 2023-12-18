@@ -229,8 +229,10 @@ peek_byte :: proc(t: ^Tokenizer, offset := 0) -> byte {
 }
 
 @private
-scan_line_comment :: proc(t: ^Tokenizer) {
-	for t.ch != '\n' do advance_rune(t)
+scan_line_comment :: proc(t: ^Tokenizer) -> (text: string) {
+	offset := t.offset
+	for t.ch != '\n' && t.ch > 0 do advance_rune(t) // Note(dragos): When this is simplified, t.ch > 0 should be gone. This is used because there might not be a newline if the comment is before EOF
+	return t.source[offset : t.offset]
 }
 
 @private
@@ -297,7 +299,8 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 	case '#':
 		// ignore shebang on the first line
 		if t.line_count == 1 && peek_byte(t) == '!' && peek_byte(t, 1) == '/' {
-			scan_line_comment(t)
+			token.text = scan_line_comment(t)
+			token.kind = .Comment
 			break
 		}
 		token.kind = .Hash
@@ -319,10 +322,12 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 			token.kind = scan_maybe_two_char_token(t, '.', .Dot_Dot_Dot, .Dot_Dot)
 		}
 
-	case '/':
+	case '/': // Note(dragos): simplify this...
 		token.kind = .Slash
 		if advance_if_next(t, '/') {
-			scan_line_comment(t)
+			advance_rune(t)
+			token.text = scan_line_comment(t)
+			token.kind = .Comment
 		} else if advance_if_next(t, '*') {
 			scan_block_comment(t)
 		}
@@ -335,9 +340,16 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 		if advance_if_next(t, '>') do token.kind = .Gt_Gt
 		else do token.kind = scan_maybe_two_char_token(t, '=', .Gt_Eq, .Gt)
 	
+	case '"':
+		token.kind = .String
+		if peek_byte(t) == '"' && peek_byte(t, 1) == '"' {
+			// Todo(dragos): scan_raw_string
+		} else {
+			token.text = scan_string(t)
+		}
+	
 	case '\n':
 		token.kind = .Line // Note(Dragos): How is this handled in comment blocks?
-
 	}
 	
 	if token.text == "" {
@@ -387,7 +399,28 @@ scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 	return t.source[offset : t.offset], UNDEFINED_VAL
 }
 
+// Note(Dragos): Should this be allocated by the vm?
 @private
-scan_string :: proc(t: ^Tokenizer) {
-
+scan_string :: proc(t: ^Tokenizer) -> (text: string) {
+	advance_rune(t)
+	offset := t.offset
+	for {
+		ch := t.ch
+		if ch == '\n' || ch < 0 {
+			lex_error(t, "String was not terminated.")
+			break
+		}
+		
+		if ch == '"' {
+			break
+		}
+		if ch == '\\' {
+			// Todo(dragos): scan escapes
+		}
+		if ch == '%' {
+			// Todo(Dragos): interpolation
+		}
+		advance_rune(t)
+	}
+	return t.source[offset : t.offset]
 }

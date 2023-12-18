@@ -288,11 +288,7 @@ make_token :: proc(parser: ^Parser, kind: Token_Kind) {
 	//if kind == .LINE do parser.next.line -= 1
 }
 
-// If current == [c], make a token of type [two], else [one]
-@private
-two_char_token :: proc(parser: ^Parser, c: rune, two: Token_Kind, one: Token_Kind) {
-	make_token(parser, two if match_char(parser, c) else one)
-}
+
 
 @private
 peek_rune :: proc(p: ^Parser, offset := 0) -> rune {

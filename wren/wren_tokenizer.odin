@@ -235,8 +235,7 @@ scan_comment :: proc(t: ^Tokenizer) -> string {
 	advance_rune(t)
 	general: {
 		if t.ch == '/' || t.ch == '!' {
-			advance_rune(t)
-			for t.ch != '\n' && t.ch >= 0 {
+			for peek_byte(t) != '\n' && t.ch >= 0 {
 				advance_rune(t)
 			}
 			break general

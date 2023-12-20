@@ -220,6 +220,7 @@ keywords := [?]Keyword {
 	{"while", .While},
 }
 
+
 @private
 peek_byte :: proc(t: ^Tokenizer, offset := 0) -> byte {
 	if t.read_offset + offset < len(t.source) {
@@ -229,15 +230,40 @@ peek_byte :: proc(t: ^Tokenizer, offset := 0) -> byte {
 }
 
 @private
-scan_line_comment :: proc(t: ^Tokenizer) -> (text: string) {
+scan_comment :: proc(t: ^Tokenizer) -> string {
 	offset := t.offset
-	for t.ch != '\n' && t.ch > 0 do advance_rune(t) // Note(dragos): When this is simplified, t.ch > 0 should be gone. This is used because there might not be a newline if the comment is before EOF
-	return t.source[offset : t.offset]
-}
-
-@private
-scan_block_comment :: proc(t: ^Tokenizer) {
-
+	advance_rune(t)
+	general: {
+		if t.ch == '/' || t.ch == '!' {
+			advance_rune(t)
+			for t.ch != '\n' && t.ch >= 0 {
+				advance_rune(t)
+			}
+			break general
+		}
+		advance_rune(t)
+		nest := 1
+		for t.ch >= 0 && nest > 0 {
+			ch := t.ch
+			advance_rune(t)
+			if ch == '/' && t.ch == '*' {
+				nest += 1
+			}
+			if ch == '*' && t.ch == '/' {
+				nest -= 1
+				advance_rune(t)
+				if nest == 0 do break general
+			}
+		}
+		lex_error(t, "Comment not terminated.")
+	}
+	lit := t.source[offset : t.offset]
+	
+	// Strip CR for line comments
+	for len(lit) > 2 && lit[1] == '/' && lit[len(lit) - 1] == '\r' {
+		lit = lit[:len(lit) - 1]
+	}
+	return lit
 }
 
 @private
@@ -299,7 +325,7 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 	case '#':
 		// ignore shebang on the first line
 		if t.line_count == 1 && peek_byte(t) == '!' && peek_byte(t, 1) == '/' {
-			token.text = scan_line_comment(t)
+			token.text = scan_comment(t)
 			token.kind = .Comment
 			break
 		}
@@ -324,12 +350,15 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 
 	case '/': // Note(dragos): simplify this...
 		token.kind = .Slash
-		if advance_if_next(t, '/') {
-			advance_rune(t)
-			token.text = scan_line_comment(t)
+		next := peek_byte(t)
+		if next == '/' || next == '*' {
+			when !BLOCK_COMMENT_LINE_AT_END {
+				line := t.line_count
+				defer token.line = line
+			}
+			token.text = scan_comment(t) // Note(Dragos): Do we want the line of a block comment to be the one declared on, or the last one?
 			token.kind = .Comment
-		} else if advance_if_next(t, '*') {
-			scan_block_comment(t)
+			
 		}
 
 	case '<':

@@ -3,16 +3,16 @@ package wren
 import "core:mem"
 import "core:fmt"
 
-NAN_TAGGING               :: #config(WREN_NAN_TAGGING, true)                             // Use NaN tagging as the internal wren.Value representation
-DEBUG_GC_STRESS           :: #config(WREN_DEBUG_GC_STRESS, false)                        // Stress test GC. Perform a collection before every allocation. Useful to ensure that memory is always correctly reachable
-DEBUG_TRACE_MEMORY        :: #config(WREN_DEBUG_TRACE_MEMORY, false)                     // Log memory operations as they occur
-DEBUG_TRACE_GC            :: #config(WREN_DEBUG_TRACE_GC, false)                         // Log garbage collections as they occur
-DEBUG_DUMP_COMPILED_CODE  :: #config(WREN_DEBUG_DUMP_COMPILED_CODE, false)               // Print out the compiled bytecode of each function
-DEBUG_TRACE_INSTRUCTIONS  :: #config(WREN_DEBUG_TRACE_INSTRUCTIONS, false)               // Trace each instruction as it's executed
-DEFAULT_INITIAL_HEAP_SIZE :: #config(WREN_DEFAULT_INITIAL_HEAP_SIZE, 10 * mem.Megabyte)  // Used to determine the initial heap size in wren.default_config
-DEFAULT_MIN_HEAP_SIZE     :: #config(WREN_DEFAULT_MIN_HEAP_SIZE, 1 * mem.Megabyte)       // Used to determine the minimum heap size in wren.default_config
-DEFAULT_HEAP_GROWTH_PERCENT :: #config(WREN_DEFAULT_HEAP_GROWTH_PERCENT, 50)             // Used to determine the amount of memory to be allocated on the next growth in wren.default_config
-
+NAN_TAGGING                 :: #config(WREN_NAN_TAGGING, true)                             // Use NaN tagging as the internal wren.Value representation
+DEBUG_GC_STRESS             :: #config(WREN_DEBUG_GC_STRESS, false)                        // Stress test GC. Perform a collection before every allocation. Useful to ensure that memory is always correctly reachable
+DEBUG_TRACE_MEMORY          :: #config(WREN_DEBUG_TRACE_MEMORY, false)                     // Log memory operations as they occur
+DEBUG_TRACE_GC              :: #config(WREN_DEBUG_TRACE_GC, false)                         // Log garbage collections as they occur
+DEBUG_DUMP_COMPILED_CODE    :: #config(WREN_DEBUG_DUMP_COMPILED_CODE, false)               // Print out the compiled bytecode of each function
+DEBUG_TRACE_INSTRUCTIONS    :: #config(WREN_DEBUG_TRACE_INSTRUCTIONS, false)               // Trace each instruction as it's executed
+DEFAULT_INITIAL_HEAP_SIZE   :: #config(WREN_DEFAULT_INITIAL_HEAP_SIZE, 10 * mem.Megabyte)  // Used to determine the initial heap size in wren.default_config
+DEFAULT_MIN_HEAP_SIZE       :: #config(WREN_DEFAULT_MIN_HEAP_SIZE, 1 * mem.Megabyte)       // Used to determine the minimum heap size in wren.default_config
+DEFAULT_HEAP_GROWTH_PERCENT :: #config(WREN_DEFAULT_HEAP_GROWTH_PERCENT, 50)               // Used to determine the amount of memory to be allocated on the next growth in wren.default_config
+BLOCK_COMMENT_LINE_AT_END   :: #config(WREN_BLOCK_COMMENT_LINE_AT_END, true)               // By default, block-comment tokens will have Token.line match the end of the block (last */). Set this to false to match the beginning (fist /*). The default is better, but I put this here because testing reasons. Might be removed
 
 Error_Proc :: #type proc(vm: ^VM, type: Error_Type, module: string, line: int, message: string)
 Write_Proc :: #type proc(vm: ^VM, text: string)

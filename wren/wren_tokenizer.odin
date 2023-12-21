@@ -274,8 +274,23 @@ scan_maybe_two_char_token :: proc(t: ^Tokenizer, next_c: rune, if_next_match: To
 	return if_next_not_match
 }
 
+scan2 :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
+	skip_whitespace(t)
+	start_offset := t.offset
+	token = default_token()
+	is_trivial := true
+	switch t.ch {
+	case '^': token.kind = .Caret
+	case '+': token.kind = .Plus
+	case '-': token.kind = .Minus
+	case '~': token.kind = .Tilde
+	case '?': token.kind = .Question
+	case: is_trivial     = false
+	}
+	return
+}
+
 scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
-	defer advance_rune(t) // Note(Dragos): Should we only advance rune when at the beginning of it? Let's see later...
 	skip_whitespace(t)
 	offset := t.offset
 	token = default_token()
@@ -301,7 +316,7 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 		if t.num_parens > 0 do t.parens[t.num_parens - 1] += 1
 		token.kind = .Left_Paren
 		token.line = t.line_count
-		token.text = t.source[offset:t.read_offset]
+		//token.text = t.source[offset:t.read_offset]
 	case ')':
 		if t.num_parens > 0 {
 			t.parens[t.num_parens - 1] -= 1
@@ -383,7 +398,8 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 	}
 	
 	if token.text == "" {
-		token.text = t.source[offset:t.read_offset]
+		token.text = t.source[offset : t.read_offset]
+		advance_rune(t)
 	}
 	if token.line == 0 {
 		token.line = t.line_count
@@ -443,6 +459,7 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 		}
 		
 		if ch == '"' {
+			advance_rune(t)
 			break
 		}
 		if ch == '\\' { // Note(Dragos): Scanning doesn't *copy* the string, so we can only check if its correct the escape
@@ -465,5 +482,5 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 		}
 		advance_rune(t)
 	}
-	return t.source[offset : t.offset if kind == .String else t.offset - 1], kind
+	return t.source[offset : t.offset - 1], kind
 }

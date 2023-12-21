@@ -22,7 +22,8 @@ test_tokens :: proc(T: ^testing.T) {
 	tokenizer.source = source
 	tokenizer.vm = vm
 	tokenizer.line_count = 1
-	advance_rune(&tokenizer)
+	tokenizer.ch = ' '
+	//advance_rune(&tokenizer)
 	for token in scan(&tokenizer) {
 		fmt.printf("%d : [%v] - '%v'\n", token.line, token.kind, token.text if token.kind != .Line else "\\n")
 	}

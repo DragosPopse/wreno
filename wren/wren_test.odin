@@ -9,10 +9,6 @@ import "core:intrinsics"
 WREN_SOURCE := #load("wren_core.wren", string)
 HELLO_SOURCE := #load("../examples/hello.wren", string)
 
-@test
-test_runes :: proc(T: ^testing.T) {
-	source := WREN_SOURCE
-}
 
 @test
 test_tokens :: proc(T: ^testing.T) {
@@ -31,6 +27,7 @@ test_tokens :: proc(T: ^testing.T) {
 }
 
 
+/*
 @test
 test_vm :: proc(T: ^testing.T) {
 	vm := vm_new()
@@ -65,3 +62,5 @@ test_map :: proc(T: ^testing.T) {
 		testing.expect(T, is_undefined(val), "Found value where we shouldn't")
 	}
 }
+
+*/

@@ -390,6 +390,7 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 		if peek_byte(t) == '"' && peek_byte(t, 1) == '"' {
 			// Todo(dragos): scan_raw_string
 		} else {
+			advance_rune(t)
 			token.text, token.kind = scan_string(t)
 		}
 	
@@ -448,9 +449,9 @@ scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 // Note(Dragos): Should this be allocated by the vm?
 @private
 scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
-	advance_rune(t)
 	offset := t.offset
 	kind = .String
+	end_minus := 1
 	for {
 		ch := t.ch
 		if ch == '\n' || ch < 0 {
@@ -473,14 +474,16 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 			if t.num_parens < MAX_INTERPOLATION_NESTING {
 				advance_rune(t)
 				if t.ch != '(' do lex_error(t, "Expected '(' after '%%'.")
+				advance_rune(t)
 				t.parens[t.num_parens] = 1
 				t.num_parens += 1
 				kind = .Interpolation
+				end_minus = 2
 				break
 			}
 			lex_error(t, "Interpolation may only nest %d levels deep.", MAX_INTERPOLATION_NESTING)
 		}
 		advance_rune(t)
 	}
-	return t.source[offset : t.offset - 1], kind
+	return t.source[offset : t.offset - end_minus], kind
 }

@@ -275,7 +275,7 @@ scan_maybe_two_char_token :: proc(t: ^Tokenizer, next_c: rune, if_next_match: To
 }
 
 scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
-	advance_rune(t) // Note(Dragos): Should we only advance rune when at the beginning of it? Let's see later...
+	defer advance_rune(t) // Note(Dragos): Should we only advance rune when at the beginning of it? Let's see later...
 	skip_whitespace(t)
 	offset := t.offset
 	token = default_token()
@@ -306,13 +306,15 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 		if t.num_parens > 0 {
 			t.parens[t.num_parens - 1] -= 1
 			if t.parens[t.num_parens - 1] == 0 {
+				advance_rune(t)
 				// The interpolation expr has ended, thus beginning the next section of the template string
 				t.num_parens -= 1
-				scan_string(t)
+				token.text, token.kind = scan_string(t)
 				return token, true // Todo(dragos): make this correct
 			}
-			token.kind = .Right_Paren
 		}
+		token.kind = .Right_Paren
+
 	case '[': token.kind = .Left_Bracket
 	case ']': token.kind = .Right_Bracket
 	case '{': token.kind = .Left_Brace
@@ -373,7 +375,7 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 		if peek_byte(t) == '"' && peek_byte(t, 1) == '"' {
 			// Todo(dragos): scan_raw_string
 		} else {
-			token.text = scan_string(t)
+			token.text, token.kind = scan_string(t)
 		}
 	
 	case '\n':
@@ -413,7 +415,7 @@ scan_name :: proc(t: ^Tokenizer) -> (name: string, kind: Token_Kind) {
 scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 	offset := t.offset
 	for is_digit(t.ch) do advance_rune(t)
-	if t.ch == '.' && is_digit(cast(rune)peek_byte(t, 1)) {
+	if t.ch == '.' && is_digit(cast(rune)peek_byte(t)) {
 		advance_rune(t)
 		for is_digit(t.ch) do advance_rune(t)
 	}
@@ -429,9 +431,10 @@ scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 
 // Note(Dragos): Should this be allocated by the vm?
 @private
-scan_string :: proc(t: ^Tokenizer) -> (text: string) {
+scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 	advance_rune(t)
 	offset := t.offset
+	kind = .String
 	for {
 		ch := t.ch
 		if ch == '\n' || ch < 0 {
@@ -442,13 +445,25 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string) {
 		if ch == '"' {
 			break
 		}
-		if ch == '\\' {
-			// Todo(dragos): scan escapes
+		if ch == '\\' { // Note(Dragos): Scanning doesn't *copy* the string, so we can only check if its correct the escape
+			advance_rune(t)
+			switch t.ch {
+			case '"': // todo the rest
+			}
+			break
 		}
 		if ch == '%' {
-			// Todo(Dragos): interpolation
+			if t.num_parens < MAX_INTERPOLATION_NESTING {
+				advance_rune(t)
+				if t.ch != '(' do lex_error(t, "Expected '(' after '%%'.")
+				t.parens[t.num_parens] = 1
+				t.num_parens += 1
+				kind = .Interpolation
+				break
+			}
+			lex_error(t, "Interpolation may only nest %d levels deep.", MAX_INTERPOLATION_NESTING)
 		}
 		advance_rune(t)
 	}
-	return t.source[offset : t.offset]
+	return t.source[offset : t.offset if kind == .String else t.offset - 1], kind
 }

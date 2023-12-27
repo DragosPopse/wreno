@@ -128,13 +128,21 @@ Tokenizer :: struct {
 
 // Is valid non-initial identifier character
 @private
-is_name :: proc(c: rune) -> bool {
+is_name :: #force_inline proc(c: rune) -> bool {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
 }
 
 @private
-is_digit :: proc(c: rune) -> bool {
+is_digit :: #force_inline proc(c: rune) -> bool {
 	return c >= '0' && c <= '9'
+}
+
+@private
+is_hex_digit :: #force_inline proc(c: rune) -> bool {
+	switch c {
+	case '0'..='9', 'a'..='f', 'A'..='F': return true
+	}
+	return false
 }
 
 @private
@@ -388,7 +396,11 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 	case '"':
 		token.kind = .String
 		if peek_byte(t) == '"' && peek_byte(t, 1) == '"' {
-			// Todo(dragos): scan_raw_string
+			token.line = t.line_count
+			token.text = scan_raw_string(t)
+			advance_rune(t)
+			advance_rune(t)
+			advance_rune(t)
 		} else {
 			advance_rune(t)
 			token.text, token.kind = scan_string(t)
@@ -400,6 +412,7 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 	
 	if token.text == "" {
 		token.text = t.source[offset : t.read_offset]
+		// Note(dragos): every token is responsible for advancing itself. When token.text == "", we assume that there is 1 rune that we need to pass so that the next scan is fresh. This holds true for trivial tokens like single or 2char tokens.
 		advance_rune(t)
 	}
 	if token.line == 0 {
@@ -428,21 +441,38 @@ scan_name :: proc(t: ^Tokenizer) -> (name: string, kind: Token_Kind) {
 	return name, kind
 }
 
+	// Todo(dragos): Handle hex. assign token.value literal 
 @private
 scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 	offset := t.offset
+	is_hex := false
+	if t.ch == '0' {
+		next := cast(rune)peek_byte(t)
+		switch next {
+		case 'x', 'X':
+			is_hex = true
+			advance_rune(t)
+			advance_rune(t)
+		case '.':
+		case: lex_error(t, "Expected either '.' or 'x' for a number literal starting with 0")
+		}
+	}
+
+	is_digit := is_digit if !is_hex else is_hex_digit
+	
 	for is_digit(t.ch) do advance_rune(t)
-	if t.ch == '.' && is_digit(cast(rune)peek_byte(t)) {
-		advance_rune(t)
-		for is_digit(t.ch) do advance_rune(t)
+	if !is_hex {
+		if t.ch == '.' && is_digit(cast(rune)peek_byte(t)) {
+			advance_rune(t)
+			for is_digit(t.ch) do advance_rune(t)
+		}
+		if t.ch == 'e' || t.ch == 'E' {
+			advance_rune(t)
+			if t.ch == '-' || t.ch == '+' do advance_rune(t)
+			if !is_digit(t.ch) do lex_error(t, "Undetermined scientific notation.")
+			for is_digit(t.ch) do advance_rune(t)
+		}
 	}
-	if t.ch == 'e' || t.ch == 'E' {
-		advance_rune(t)
-		if t.ch == '-' || t.ch == '+' do advance_rune(t)
-		if !is_digit(t.ch) do lex_error(t, "Undetermined scientific notation.")
-		for is_digit(t.ch) do advance_rune(t)
-	}
-	// Todo(dragos): handle scientific. Handle minus (or not, it's an operator?). Convert the token to a Value literal
 	return t.source[offset : t.offset], UNDEFINED_VAL
 }
 
@@ -486,4 +516,28 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 		advance_rune(t)
 	}
 	return t.source[offset : t.offset - end_minus], kind
+}
+
+@private
+scan_raw_string :: proc(t: ^Tokenizer) -> (text: string) {
+	advance_rune(t)
+	advance_rune(t)
+	advance_rune(t)
+	offset := t.offset
+	for {
+		advance_rune(t)
+		if t.ch == -1 {
+			lex_error(t, "Unterminated raw string.")
+			break
+		}
+		c := t.ch
+		c1 := peek_byte(t)
+		c2 := peek_byte(t, 1)
+		if c == '\n' {
+			t.line_count += 1
+		}
+		if c == '"' && c1 == '"' && c2 == '"' do break
+
+	}
+	return t.source[offset : t.offset]
 }

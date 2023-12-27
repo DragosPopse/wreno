@@ -26,8 +26,6 @@ test_tokens :: proc(T: ^testing.T) {
 	free_all(context.temp_allocator)
 }
 
-
-/*
 @test
 test_vm :: proc(T: ^testing.T) {
 	vm := vm_new()
@@ -62,5 +60,3 @@ test_map :: proc(T: ^testing.T) {
 		testing.expect(T, is_undefined(val), "Found value where we shouldn't")
 	}
 }
-
-*/

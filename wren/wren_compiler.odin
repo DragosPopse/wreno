@@ -39,9 +39,9 @@ MAX_INTERPOLATION_NESTING :: 8
 
 
 Class_Info :: struct {
-	name             : ^String,       // The name of the class
-	class_attributes : ^Map,          // Attributes for the class itself
-	method_attributes: ^Map,          // Attributes for methods in this class
+	name             : ^String,           // The name of the class
+	class_attributes : ^Map,              // Attributes for the class itself
+	method_attributes: ^Map,              // Attributes for methods in this class
 	fields           : [dynamic]string,   // Symbol table for the fields of the class
 	methods          : [dynamic]int,      // Symbols for the methods defined by the class. Used to detect duplicate method definitions
 	static_methods   : [dynamic]int,
@@ -230,7 +230,35 @@ add_constant :: proc(compiler: ^Compiler, constant: Value) -> int {
 	return len(compiler.fn.constants) - 1
 }
 
+// Create a new local variable with [name]. Assuems the current scope is local and the name is unique
+@private
+add_local :: proc(compiler: ^Compiler, name: string) -> int {
+	local := &compiler.locals[compiler.num_locals]
+	local.name = name
+	local.is_upvalue = false
+	local.depth = compiler.scope_depth
+	compiler.num_locals += 1
+	return compiler.num_locals - 1
+}
 
+// Declares a variable in the current scope whose name is the given token.
+//
+// If [token] is `NULL`, uses the previously consumed token. Returns its symbol.
+@private
+compiler_declare_variable :: proc(compiler: ^Compiler, token: ^Token) {
+	if token == nil {
+		unimplemented("token = &compiler->parser->previous")
+	}
+	if len(token.text) > MAX_VARIABLE_NAME {
+		error(compiler, "Variable name cannot be longer than %d characters.", MAX_VARIABLE_NAME)
+	}
+
+	// top level module scope
+	if compiler.scope_depth == -1 {
+		line := -1
+		
+	}
+}
 
 compile :: proc(vm: ^VM, module: ^Module, source: string, is_expression: bool, print_errors: bool) -> ^Fn {
 	source := source
@@ -241,4 +269,64 @@ compile :: proc(vm: ^VM, module: ^Module, source: string, is_expression: bool, p
 	}
 
 	unimplemented()
+}
+
+// Emits one single-byte argument. Returns it's index
+@private
+emit_byte :: proc(compiler: ^Compiler, byte: byte) -> int {
+	append(&compiler.fn.code, byte)
+	// Assume the instruction is assocciated with the most recently consumed token
+	append(&compiler.fn.debug.source_lines, compiler.parser.previous.line)
+	return len(compiler.fn.code) - 1
+}
+
+// Emits one bytecode instruction
+@private
+emit_op :: proc(compiler: ^Compiler, instruction: Code) {
+	emit_byte(compiler, auto_cast instruction)
+	
+	// keep track of the stack's high water mark
+	compiler.num_slots += stack_effects[instruction]
+	if compiler.num_slots > compiler.fn.max_slots {
+		compiler.fn.max_slots = compiler.num_slots
+	}
+}
+
+// Emits one 16-bit argument, written big endian
+@private
+emit_short :: proc(compiler: ^Compiler, arg: i16) {
+	emit_byte(compiler, byte((arg >> 8) & 0xFF))
+	emit_byte(compiler, byte(arg & 0xFF))
+} 
+
+// Note(Dragos): I'm not sure if this abstraction is gonna do any good. 
+// Emits one bytecode instruction followed by a 8-bit argument. Returns the index of the argument in bytecode
+@private
+emit_byte_arg :: proc(compiler: ^Compiler, instruction: Code, arg: byte) -> int {
+	emit_op(compiler, instruction)
+	return emit_byte(compiler, arg)
+}
+
+@private
+emit_short_arg :: proc(compiler: ^Compiler, instruction: Code, arg: i16) {
+	emit_op(compiler, instruction)
+	emit_short(compiler, arg)
+}
+
+// Emits [instruction] followed by a placeholder for a jump offset. 
+// The placeholder can be patched by calling [jump_patch]. 
+// Returns the index of the placeholder
+@private
+emit_jump :: proc(compiler: ^Compiler, instruction: Code) -> int {
+	emit_op(compiler, instruction)
+	emit_byte(compiler, 0xff)
+	return emit_byte(compiler, 0xff) - 1
+}
+
+// Creates a new constant for the current value and emits the bytecode to load
+// it from the constant table.
+@private
+emit_constant :: proc(compiler: ^Compiler, value: Value) {
+	constant := add_constant(compiler, value)
+	emit_short_arg(compiler, .CONSTANT, cast(i16)constant)
 }

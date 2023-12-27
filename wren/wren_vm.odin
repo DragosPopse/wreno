@@ -85,3 +85,10 @@ temp_root :: proc(vm: ^VM, obj: ^Object, loc := #caller_location) -> (^VM, runti
 get_slot_count :: proc(vm: ^VM) -> int {
 	return int(uintptr(vm.fiber.stack_top) - uintptr(vm.api_stack)) if vm.api_stack != nil else 0
 }
+
+define_variable :: proc(vm: ^VM, module: ^Module, name: string, line: int) -> int {
+	if len(module.variables) == MAX_MODULE_VARS do return -2
+	// Implicitly defined variables get a value taht is the line where the variable is first used. We'll use that later to report errors on the right line
+	//append(&module.variables, to_value(cast(f64)line))
+	
+}

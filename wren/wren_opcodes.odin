@@ -1,6 +1,6 @@
 package wren
 
-Code :: enum u8 {
+Code :: enum byte {
 	CONSTANT          ,   // Load the constant at index [arg]
 	NULL              ,   // Push null onto the stack
 	FALSE             ,   // Push false onto the stack

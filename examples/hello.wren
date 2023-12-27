@@ -1,4 +1,3 @@
-0xff
-0.323
-"""Hello there
-we good"""
+var a = 23
+var b = 73
+var c = a * (a + b)

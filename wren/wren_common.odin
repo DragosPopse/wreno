@@ -5,7 +5,7 @@ package wren
 // The maximum number of module-level variables that may be defined at one time.
 // This limitation comes from the 16 bits used for the arguments to
 // `CODE_LOAD_MODULE_VAR` and `CODE_STORE_MODULE_VAR`.
-MAX_MODULE_VARS :: max(u16)
+MAX_MODULE_VARS :: cast(int)max(u16)
 
 // The maximum number of arguments that can be passed to a method. Note that
 // this limitation is hardcoded in other places in the VM, in particular, the

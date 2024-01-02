@@ -90,5 +90,5 @@ define_variable :: proc(vm: ^VM, module: ^Module, name: string, line: int) -> in
 	if len(module.variables) == MAX_MODULE_VARS do return -2
 	// Implicitly defined variables get a value taht is the line where the variable is first used. We'll use that later to report errors on the right line
 	//append(&module.variables, to_value(cast(f64)line))
-	
+	unimplemented()
 }

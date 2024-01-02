@@ -256,7 +256,7 @@ compiler_declare_variable :: proc(compiler: ^Compiler, token: ^Token) {
 	// top level module scope
 	if compiler.scope_depth == -1 {
 		line := -1
-		
+		unimplemented()
 	}
 }
 

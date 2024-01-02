@@ -11,6 +11,8 @@
 !build/**
 !wren/**
 
+!original_code/**
+
 !tests/**
 !examples/**
 

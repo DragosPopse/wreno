@@ -10,6 +10,7 @@
 # Odin Packages
 !build/**
 !wren/**
+!wrenls/**
 
 !original_code/**
 

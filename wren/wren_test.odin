@@ -14,12 +14,7 @@ HELLO_SOURCE := #load("../examples/hello.wren", string)
 test_tokens :: proc(T: ^testing.T) {
 	source := HELLO_SOURCE
 	vm := vm_new()
-	tokenizer: Tokenizer // Note(Dragos): Maybedge the tokenizer shouldn't need the VM
-	tokenizer.source = source
-	tokenizer.vm = vm
-	tokenizer.line_count = 1
-	tokenizer.ch = ' '
-	//advance_rune(&tokenizer)
+	tokenizer := default_tokenizer(source)
 	for token in scan(&tokenizer) {
 		fmt.printf("%d : [%v] - '%v'\n", token.line, token.kind, token.text if token.kind != .Line else "\\n")
 	}

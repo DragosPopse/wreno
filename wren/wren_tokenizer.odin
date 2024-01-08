@@ -112,7 +112,6 @@ default_token :: proc() -> Token {
 }
 
 Tokenizer :: struct {
-	vm         : ^VM,                              // a vm is required to allocate Token.value when needed
 	module     : ^Module,                          // module being tokenized
 	source     : string,
 	ch         : rune,                             // the most recent rune
@@ -122,8 +121,18 @@ Tokenizer :: struct {
 	line_count : int,
 	parens     : [MAX_INTERPOLATION_NESTING]int,   // Tracks the lexing state when tokenizing interpolated strings
 	num_parens : int,
-	tokens     : [dynamic]Token,
 	has_errors : bool,
+}
+
+tokenizer_init :: proc(t: ^Tokenizer) {
+	t.line_count = 1
+	t.ch = ' '
+}
+
+default_tokenizer :: proc(source: string) -> (t: Tokenizer) {
+	tokenizer_init(&t)
+	t.source = source
+	return t
 }
 
 // Is valid non-initial identifier character

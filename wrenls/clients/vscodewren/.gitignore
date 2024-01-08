@@ -16,6 +16,9 @@
 
 !/src/**
 
+# We'll keep the vscode configuration in this folder, as we know we'll be using vscode to develop this.
+!.vscode/**
+
 # This seems to be required, otherwise it won't blacklist this properly
 node_modules/
 

@@ -1,21 +1,41 @@
 {
-  "name": "wrenlsp",
+  "name": "wrenls",
   "displayName": "Wren Language Server",
   "description": "Language server support for the Wren programming language",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.85.0"
   },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
   "categories": [
     "Programming Languages"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:wren"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "wrenlsp.helloWorld",
-        "title": "Hello World"
+        "command": "wrenls.helloWorld",
+        "title": "Hello World",
+        "category": "wrenls"
+      }
+    ],
+    "languages": [
+      {
+        "id": "wren",
+        "extensions": [".wren"],
+        "aliases": ["Wren"]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "wren",
+        "scopeName": "source.wren",
+        "path": "./syntaxes/wren.tmLanguage.json"
       }
     ]
   },

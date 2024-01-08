@@ -15,6 +15,7 @@
 
 
 !/src/**
+!/syntaxes/**
 
 # We'll keep the vscode configuration in this folder, as we know we'll be using vscode to develop this.
 !.vscode/**

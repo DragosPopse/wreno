@@ -16,7 +16,7 @@ test_tokens :: proc(T: ^testing.T) {
 	vm := vm_new()
 	tokenizer := default_tokenizer(source)
 	for token in scan(&tokenizer) {
-		fmt.printf("%d : [%v] - '%v'\n", token.line, token.kind, token.text if token.kind != .Line else "\\n")
+		fmt.printf("(%d:%d) : [%v] - '%v'\n", token.pos.line, token.pos.column, token.kind, token.text if token.kind != .Line else "\\n")
 	}
 	free_all(context.temp_allocator)
 }

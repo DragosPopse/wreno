@@ -1,6 +1,6 @@
 package wren
 
-@(disabled= !(ODIN_BUILD_MODE == .Executable))
+@(disabled = !(ODIN_BUILD_MODE == .Executable))
 main :: proc() {
 	
 }

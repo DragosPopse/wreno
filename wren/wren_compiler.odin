@@ -198,12 +198,12 @@ error :: proc(compiler: ^Compiler, format: string, args: ..any) {
 	token := compiler.parser.previous
 	if token.kind == .Error do return // If the parse error was caused by an error token, the lexer has already reported it
 	if token.kind == .Line {
-		print_error(compiler.parser, token.line, "Error at newline", format, args)
+		print_error(compiler.parser, token.pos.line, "Error at newline", format, args)
 	} else if token.kind == .EOF {
-		print_error(compiler.parser, token.line, "Error at end of file", format, args)
+		print_error(compiler.parser, token.pos.line, "Error at end of file", format, args)
 	} else {
 		label := fmt.tprintf("Error at '%s'", token.text)
-		print_error(compiler.parser, token.line, label, format, args)
+		print_error(compiler.parser, token.pos.line, label, format, args)
 	}
 }
 
@@ -276,7 +276,7 @@ compile :: proc(vm: ^VM, module: ^Module, source: string, is_expression: bool, p
 emit_byte :: proc(compiler: ^Compiler, byte: byte) -> int {
 	append(&compiler.fn.code, byte)
 	// Assume the instruction is assocciated with the most recently consumed token
-	append(&compiler.fn.debug.source_lines, compiler.parser.previous.line)
+	append(&compiler.fn.debug.source_lines, compiler.parser.previous.pos.line)
 	return len(compiler.fn.code) - 1
 }
 

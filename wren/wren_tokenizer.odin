@@ -96,17 +96,27 @@ Token_Kind :: enum {
 	EOF,
 }
 
+/*
+	Note(Dragos): Should the token have pos+end or just pos? Odin's tokenizer does just pos, and leaves the parser to have end of expressions. I don't really know.
+	A single pos behaves well on trivial tokens, but becomes false on things like raw strings
+	Note(Dragos): Raw strings and strings give us a pos that begins with the quotes. I don't think it should, but we will see
+*/
 Token :: struct {
 	kind : Token_Kind,
 	text : string,       // Points directly into the source
-	line : int,          // 1-based line where the token appears
+	pos  : Token_Pos,    // Position in source code
 	value: Value,        // The parsed value if the token is a literal
+}
+
+Token_Pos :: struct {
+	offset: int,
+	line  : int,
+	column: int,
 }
 
 default_token :: proc() -> Token {
 	return Token {
 		kind  = .Error,
-		line  = 0,
 		value = UNDEFINED_VAL,
 	}
 }
@@ -133,6 +143,13 @@ default_tokenizer :: proc(source: string) -> (t: Tokenizer) {
 	tokenizer_init(&t)
 	t.source = source
 	return t
+}
+
+offset_to_pos :: proc(t: ^Tokenizer, offset: int) -> (pos: Token_Pos) {
+	pos.offset = offset
+	pos.line = t.line_count
+	pos.column = offset - t.line_offset + 1
+	return pos
 }
 
 // Is valid non-initial identifier character
@@ -314,7 +331,7 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 	ch := t.ch
 	if ch == -1 {
 		token.kind = .EOF
-		token.line = t.line_count
+		token.pos = offset_to_pos(t, t.offset)
 		token.text = "<eof>"
 		token.value = UNDEFINED_VAL
 		return token, false
@@ -332,8 +349,7 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 	case '(':
 		if t.num_parens > 0 do t.parens[t.num_parens - 1] += 1
 		token.kind = .Left_Paren
-		token.line = t.line_count
-		//token.text = t.source[offset:t.read_offset]
+
 	case ')':
 		if t.num_parens > 0 {
 			t.parens[t.num_parens - 1] -= 1
@@ -405,7 +421,7 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 	case '"':
 		token.kind = .String
 		if peek_byte(t) == '"' && peek_byte(t, 1) == '"' {
-			token.line = t.line_count
+			token.pos = offset_to_pos(t, offset)
 			token.text = scan_raw_string(t)
 			advance_rune(t)
 			advance_rune(t)
@@ -424,8 +440,8 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 		// Note(dragos): every token is responsible for advancing itself. When token.text == "", we assume that there is 1 rune that we need to pass so that the next scan is fresh. This holds true for trivial tokens like single or 2char tokens.
 		advance_rune(t)
 	}
-	if token.line == 0 {
-		token.line = t.line_count
+	if token.pos == {} {
+		token.pos = offset_to_pos(t, offset)
 	}
 	
 	return token, true

@@ -3,3 +3,4 @@
 - [ ] Implement AST
 - [ ] Implement bytecode generation
 - [ ] Implement interpreter
+- [ ] Add character offset on line in the tokenizer. Useful for the language server

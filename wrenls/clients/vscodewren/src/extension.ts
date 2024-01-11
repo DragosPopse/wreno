@@ -15,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "wrenlsp" is now active!');
 
-	vscode.window.showInformationMessage('Wren LSP Client is now active.')
+	vscode.window.showInformationMessage('Wren LSP Client is now active.');
 
 	register_commands(context);
 

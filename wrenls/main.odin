@@ -39,6 +39,14 @@ main :: proc() {
 	for running {
 		context.logger = logger
 		// Consume requests
+
+		if sync.guard(&requests_mutex) {
+			for req in requests {
+					
+			}
+		}
+
+		free_all(context.temp_allocator) // Note(Dragos): Is the temp allocator thread_local? I believe so
 	}
 }
 
@@ -59,11 +67,48 @@ Request_Thread_Data :: struct {
 }
 
 request_thread_main :: proc(data: rawptr) {
-	request_data := cast(^Request_Thread_Data)data
+	data := cast(^Request_Thread_Data)data
 	
 	for running {
-		context.logger = request_data.logger
+		context.logger = data.logger
+		header, header_ok := lsp.parse_header(data.reader)
+		if !header_ok {
+			log.error("Failed to read and parse header")
+			return
+		}
+		body, body_ok := lsp.parse_body(data.reader, header)
+		if !body_ok {
+			log.error("Failed to read and parse body")
+			return // Note(Dragos): These returns seem...crashful
+		}
 
+		root, root_is_object := body.(json.Object)
+		if !root_is_object {
+			log.error("No root object")
+			return
+		}
+
+		id: lsp.Request_Id
+		id_value, id_value_exists := root["id"]
+		if id_value_exists {
+			#partial switch v in id_value {
+			case json.String:  id = v
+			case json.Integer: id = v
+			case:              id = 0
+			}
+		}
+
+		if sync.guard(&requests_mutex) {
+			method := root["method"].(json.String)
+			if method == "$/cancelRequest" {
+				// Todo(Dragos): handle cancels
+			} else {
+				append(&requests, Request{id = id, value = root})
+				sync.sema_post(&requests_sem)
+			} 
+		}
+
+		free_all(context.temp_allocator)
 	}
 }
 

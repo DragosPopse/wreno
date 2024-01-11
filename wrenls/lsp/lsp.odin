@@ -42,20 +42,20 @@ Request_Type :: enum {
 	Initialized,
 	Shutdown,
 	Exit,
-	DidOpen,
-	DidChange,
-	DidClose,
-	DidSave,
+	Did_Open,
+	Did_Change,
+	Did_Close,
+	Did_Save,
 	Definition,
 	Completion,
 	SignatureHelp,
-	DocumentSymbol,
-	SemanticTokensFull,
-	SemanticTokensRange,
-	FormatDocument,
+	Document_Symbol,
+	Semantic_Tokens_Full,
+	Semantic_Tokens_Range,
+	Format_Document,
 	Hover,
-	CancelRequest,
-	InlayHint,
+	Cancel_Request,
+	Inlay_Hint,
 }
 
 
@@ -114,12 +114,6 @@ Notification_Logging_Params :: struct {
 Notification_Params :: union {
 	Notification_Logging_Params,
 	Notification_Publish_Diagnostics_Params,
-}
-
-Notification :: struct {
-	jsonrpc: string,
-	method : string,
-	params : Notification_Params,
 }
 
 Save_Options :: struct {
@@ -202,7 +196,7 @@ Completion_Item_Kind :: enum {
 	File          = 17,
 	Reference     = 18,
 	Folder        = 19,
-	EnumMember    = 20,
+	Enum_Member    = 20,
 	Constant      = 21,
 	Struct        = 22,
 	Event         = 23,
@@ -258,11 +252,11 @@ Symbol_Kind :: enum {
 	Object        = 19,
 	Key           = 20,
 	Null          = 21,
-	EnumMember    = 22,
+	Enum_Member    = 22,
 	Struct        = 23,
 	Event         = 24,
 	Operator      = 25,
-	TypeParameter = 26,
+	Type_Parameter = 26,
 }
 
 Document_Symbol :: struct {
@@ -357,7 +351,7 @@ Workspace_Edit :: struct {
 }
 
 Response_Params :: struct {
-	Response_Initialize_Params,
+	Response_Initialize_Params, // Note(Dragos): Should we rename this?
 	rawptr,
 	Location,
 	[]Location,
@@ -372,6 +366,13 @@ Response_Params :: struct {
 	[]Workspace_Symbol,
 	Workspace_Edit,
 }
+
+Notification :: struct {
+	jsonrpc: string,
+	method : string,
+	params : Notification_Params,
+}
+
 
 Response :: struct {
 	jsonrpc: string,
@@ -498,4 +499,18 @@ parse_header :: proc(reader: io.Reader) -> (header: Header, ok: bool) {
 		}
 	}
 	return header, found_content_length
+}
+
+parse_body :: proc(reader: io.Reader, header: Header, allocator := context.allocator) -> (json.Value, bool) {
+	data := make([]u8, header.content_length, context.temp_allocator)
+	if _, err := io.read(reader, data); err != nil {
+		log.error("Failed to read body")
+		return nil, false
+	}
+	value, parse_err := json.parse(data = data, parse_integers = true, allocator = allocator)
+	if parse_err != nil {
+		log.error("Failed to parse body")
+		return nil, false
+	}
+	return value, true
 }

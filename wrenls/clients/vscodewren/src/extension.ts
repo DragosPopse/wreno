@@ -21,10 +21,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// note(Dragos): these server options are for debugging purposes. We need a way to figure out this path. Probably a config file or a user-option
 	let server_options: lc.ServerOptions = {
-		command: '/dev/wreno/wrenls/wrenls',
+		command: 'c:/dev/wreno/wrenls.exe',
 		args: [],
 		options: {
-			cwd: '/dev/wreno/wrenls/wrenls',
+			cwd: 'c:/dev/wreno',
 		},
 	};
 
@@ -40,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
 		client_options,
 	);
 
-	client.setTrace(lc.Trace.Verbose);
+	client.setTrace(lc.Trace.Compact);
 	client.start();
 }
 

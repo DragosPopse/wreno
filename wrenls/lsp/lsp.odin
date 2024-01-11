@@ -14,13 +14,10 @@ import "core:strconv"
 import "core:fmt"
 import "core:log"
 
-Request_Id :: union {
+RequestId :: union {
 	string,
 	i64,
 }
-
-
-
 
 Header :: struct {
 	content_length: int,
@@ -28,16 +25,9 @@ Header :: struct {
 }
 
 URI :: string
-Document_Uri :: string
+DocumentUri :: string
 
-Package :: struct {
-	name         : string,
-	base         : string,
-	base_original: string,
-	original     : string,
-}
-
-Request_Type :: enum {
+RequestType :: enum {
 	Initialize,
 	Initialized,
 	Shutdown,
@@ -72,7 +62,7 @@ RequestInfo :: struct {
 */
 
 
-Diagnostic_Severity :: enum {
+DiagnosticSeverity :: enum {
 	Error       = 1,
 	Warning     = 2,
 	Information = 3,
@@ -96,44 +86,44 @@ Location :: struct {
 
 Diagnostic :: struct {
 	range   : Range,
-	severity: Diagnostic_Severity,
+	severity: DiagnosticSeverity,
 	code    : string,
 	message : string,
 }
 
-Notification_Publish_Diagnostics_Params :: struct {
+NotificationPublishDiagnosticsParams :: struct {
 	uri        : string,
 	diagnostics: []Diagnostic,
 }
 
-Notification_Logging_Params :: struct {
-	type   : Diagnostic_Severity,
+NotificationLoggingParams :: struct {
+	type   : DiagnosticSeverity,
 	message: string,
 }
 
-Notification_Params :: union {
-	Notification_Logging_Params,
-	Notification_Publish_Diagnostics_Params,
+NotificationParams :: union {
+	NotificationLoggingParams,
+	NotificationPublishDiagnosticsParams,
 }
 
-Notification :: struct {
+NotificationMessage :: struct {
 	jsonrpc: string,
 	method : string,
-	params : Notification_Params,
+	params : NotificationParams,
 }
 
-Save_Options :: struct {
+SaveOptions :: struct {
 	includeText: bool,
 }
 
-Text_Document_Sync_Options :: struct {
+TextDocumentSyncOptions :: struct {
 	openClose: bool,
 	change   : int,
-	save     : Save_Options,
+	save     : SaveOptions,
 }
 
 // Note(Dragos): this extends WorkDoneProgressOptions. Should we add that? OLS doesn't. Test later
-Completion_Options :: struct {
+CompletionOptions :: struct {
 	resolveProvider  : bool,
 	triggerCharacters: []string,
 	completionItem   : struct {
@@ -141,18 +131,18 @@ Completion_Options :: struct {
 	}
 }
 
-Signature_Help_Options :: struct {
+SignatureHelpOptions :: struct {
 	triggerCharacters  : []string,
 	retriggerCharacters: []string,
 }
 
-Semantic_Tokens_Legend :: struct {
+SemanticTokensLegend :: struct {
 	tokenTypes    : []string,
 	tokenModifiers: []string,
 }
 
-Semantic_Tokens_Options :: struct {
-	legend: Semantic_Tokens_Legend,
+SemanticTokensOptions :: struct {
+	legend: SemanticTokensLegend,
 	range : bool,
 	full  : bool,
 }
@@ -161,13 +151,12 @@ Document_Link_Options :: struct {
 	resolveProvider: bool,
 }
 
-// Note(Dragos): We'll leave the names not snake_case to see if it works, then we'll do some json:"_" magic
-Server_Capabilities :: struct {
-	textDocumentSync          : Text_Document_Sync_Options,
+ServerCapabilities :: struct {
+	textDocumentSync          : TextDocumentSyncOptions,
 	definitionProvider        : bool,
-	completionProvider        : Completion_Options,
-	signatureHelpProvider     : Signature_Help_Options,
-	semanticTokensProvider    : Semantic_Tokens_Options,
+	completionProvider        : CompletionOptions,
+	signatureHelpProvider     : SignatureHelpOptions,
+	semanticTokensProvider    : SemanticTokensOptions,
 	documentSymbolProvider    : bool,
 	hoverProvider             : bool,
 	documentFormattingProvider: bool,
@@ -178,11 +167,11 @@ Server_Capabilities :: struct {
 	documentLinkProvider      : Document_Link_Options,
 }
 
-Response_Initialize_Params :: struct {
-	capabilities: Server_Capabilities,
+ResponseInitializeParams :: struct {
+	capabilities: ServerCapabilities,
 }
 
-Completion_Item_Kind :: enum {
+CompletionItemKind :: enum {
 	Text          = 1,
 	Method        = 2,
 	Function      = 3,
@@ -210,33 +199,33 @@ Completion_Item_Kind :: enum {
 	TypeParameter = 25,
 }
 
-Completion_Item :: struct {
+CompletionItem :: struct {
 	label: string,
-	kind: Completion_Item_Kind,
+	kind: CompletionItemKind,
 }
 
-Completion_List :: struct {
+CompletionList :: struct {
 	isIncomplete: bool,
-	items: []Completion_Item,
+	items: []CompletionItem,
 }
 
-Signature_Information :: struct {
+SignatureInformation :: struct {
 	label        : string,
 	documentation: string,
-	parameters   : []Parameter_Information,
+	parameters   : []ParameterInformation,
 }
 
-Parameter_Information  :: struct {
+ParameterInformation  :: struct {
 	label: string,
 }
 
-Signature_Help :: struct {
-	signatures     : []Signature_Information,
+SignatureHelp :: struct {
+	signatures     : []SignatureInformation,
 	activeSignature: int,
 	activeParameter: int,
 }
 
-Symbol_Kind :: enum {
+SymbolKind :: enum {
 	File          = 1,
 	Module        = 2,
 	Namespace     = 3,
@@ -265,119 +254,121 @@ Symbol_Kind :: enum {
 	TypeParameter = 26,
 }
 
-Document_Symbol :: struct {
+DocumentSymbol :: struct {
 	name: string,
-	kind: Symbol_Kind,
+	kind: SymbolKind,
 	range: Range,
 	selectionRange: Range,
-	children: []Document_Symbol,
+	children: []DocumentSymbol,
 }
 
-Semantic_Tokens :: struct {
+SemanticTokens :: struct {
 	data: []u32,
 }
 
-Markup_Content :: struct {
+MarkupContent :: struct {
 	kind : string,
 	value: string,
 }
 
 Hover :: struct {
-	contents: Markup_Content,
+	contents: MarkupContent,
 	range   : Range,
 }
 
-Text_Edit :: struct {
+TextEdit :: struct {
 	range  : Range,
 	newText: string,
 }
 
-Insert_Replace_Edit :: struct {
+InsertReplaceEdit :: struct {
 	insert : Range,
 	newText: string,
 	replace: Range,
 }
 
-Inlay_Hint_Kind :: enum {
+InlayHintKind :: enum {
 	Type      = 1,
 	Parameter = 2,
 }
 
-Inlay_Hint :: struct {
+InlayHint :: struct {
 	position: Position,
-	kind    : Inlay_Hint_Kind,
+	kind    : InlayHintKind,
 	label   : string,
 }
 
-Document_Link_Client_Capabilities :: struct {
+DocumentLinkClientCapabilities :: struct {
 	tooltipSupport: bool,
 }
 
-Text_Document_Identifier :: struct {
+TextDocumentIdentifier :: struct {
 	uri: string,
 }
 
-Document_Link_Params :: struct {
-	textDocument: Text_Document_Identifier,
+DocumentLinkParams :: struct {
+	textDocument: TextDocumentIdentifier,
 }
 
-Document_Link :: struct {
+DocumentLink :: struct {
 	range  : Range,
 	target : string,
 	tooltip: string,
 }
 
-Workspace_Symbol_Params :: struct {
+WorkspaceSymbolParams :: struct {
 	query: string,
 }
 
-Workspace_Symbol :: struct {
+WorkspaceSymbol :: struct {
 	name: string,
-	kind: Symbol_Kind,
+	kind: SymbolKind,
 	location: Location,
 }
 
-Text_Document_Item :: struct {
+TextDocumentItem :: struct {
 	uri : string,
 	text: string,
 }
 
-Optinal_Versioned_Text_Document_Identifier :: struct {
+OptinalVersionedTextDocumentIdentifier :: struct {
 	uri    : string,
 	version: Maybe(int),
 }
 
-Text_Document_Edit :: struct {
-	textDocument: Optinal_Versioned_Text_Document_Identifier,
-	edits: []Text_Edit,
+TextDocumentEdit :: struct {
+	textDocument: OptinalVersionedTextDocumentIdentifier,
+	edits: []TextEdit,
 }
 
-Workspace_Edit :: struct {
-	documentChanges: []Text_Document_Edit,
+WorkspaceEdit :: struct {
+	documentChanges: []TextDocumentEdit,
 }
 
-Response_Params :: struct {
-	Response_Initialize_Params,
+ResponseParams :: struct {
+	ResponseInitializeParams,
 	rawptr,
 	Location,
 	[]Location,
-	Completion_List,
-	Signature_Help,
-	[]Document_Symbol,
-	Semantic_Tokens,
+	CompletionList,
+	SignatureHelp,
+	[]DocumentSymbol,
+	SemanticTokens,
 	Hover,
-	[]Text_Edit,
-	[]Inlay_Hint,
-	[]Document_Link,
-	[]Workspace_Symbol,
-	Workspace_Edit,
+	[]TextEdit,
+	[]InlayHint,
+	[]DocumentLink,
+	[]WorkspaceSymbol,
+	WorkspaceEdit,
 }
 
-Response :: struct {
+ResponseMessage :: struct {
 	jsonrpc: string,
-	id: Request_Id,
-	result: Response_Params,
+	id: RequestId,
+	result: ResponseParams,
 }
+
+
 
 LSP_Logger :: struct {
 	writer: io.Writer,
@@ -404,7 +395,7 @@ lsp_logger_proc :: proc(
 ) {
 	data := cast(^LSP_Logger)data
 	message := fmt.tprintf("%s", text) // Note(Dragos): do we need this???
-	message_type: Diagnostic_Severity
+	message_type: DiagnosticSeverity
 	switch level {
 	case .Debug:         message_type = .Hint
 	case .Info:          message_type = .Information
@@ -412,10 +403,10 @@ lsp_logger_proc :: proc(
 	case .Error, .Fatal: message_type = .Error
 	}
 
-	notif := Notification {
+	notif := NotificationMessage {
 		jsonrpc = "2.0",
 		method = "window/logMessage",
-		params = Notification_Logging_Params {
+		params = NotificationLoggingParams {
 			type = message_type,
 			message = message,
 		},
@@ -424,7 +415,7 @@ lsp_logger_proc :: proc(
 	send_notification(notif, data.writer)
 }
 
-send_notification :: proc(notif: Notification, writer: io.Writer) -> bool {
+send_notification :: proc(notif: NotificationMessage, writer: io.Writer) -> bool {
 	data, marshal_error := json.marshal(notif, {}, context.temp_allocator)
 	header := fmt.tprintf("Content-Length: %v\r\n\r\n", len(data))
 	if marshal_error != nil {

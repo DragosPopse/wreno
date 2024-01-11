@@ -43,7 +43,7 @@ main :: proc() {
 }
 
 Request :: struct {
-	id: lsp.Request_Id,
+	id: lsp.RequestId,
 	value: json.Value,
 	is_notification: bool,
 }

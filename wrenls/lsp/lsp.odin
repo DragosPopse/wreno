@@ -48,7 +48,7 @@ Request_Type :: enum {
 	Did_Save,
 	Definition,
 	Completion,
-	SignatureHelp,
+	Signature_Help,
 	Document_Symbol,
 	Semantic_Tokens_Full,
 	Semantic_Tokens_Range,
@@ -172,7 +172,12 @@ Server_Capabilities :: struct {
 	documentLinkProvider      : Document_Link_Options,
 }
 
-Response_Initialize_Params :: struct {
+Server_Info :: struct {
+	name   : string,
+	version: string,
+}
+
+Initialize_Result :: struct {
 	capabilities: Server_Capabilities,
 }
 
@@ -351,7 +356,7 @@ Workspace_Edit :: struct {
 }
 
 Response_Params :: union {
-	Response_Initialize_Params, // Note(Dragos): Should we rename this?
+	Initialize_Result, // Note(Dragos): Should we rename this?
 	rawptr,
 	Location,
 	[]Location,
@@ -367,14 +372,14 @@ Response_Params :: union {
 	Workspace_Edit,
 }
 
-Notification :: struct {
+Notification_Message :: struct {
 	jsonrpc: string,
 	method : string,
 	params : Notification_Params,
 }
 
 
-Response :: struct {
+Response_Message :: struct {
 	jsonrpc: string,
 	id: Request_Id,
 	result: Response_Params,
@@ -413,7 +418,7 @@ lsp_logger_proc :: proc(
 	case .Error, .Fatal: message_type = .Error
 	}
 
-	notif := Notification {
+	notif := Notification_Message {
 		jsonrpc = "2.0",
 		method = "window/logMessage",
 		params = Notification_Logging_Params {
@@ -425,7 +430,7 @@ lsp_logger_proc :: proc(
 	send_notification(notif, data.writer)
 }
 
-send_notification :: proc(notif: Notification, writer: io.Writer) -> bool {
+send_notification :: proc(notif: Notification_Message, writer: io.Writer) -> bool {
 	data, marshal_error := json.marshal(notif, {}, context.temp_allocator)
 	header := fmt.tprintf("Content-Length: %v\r\n\r\n", len(data))
 	if marshal_error != nil {

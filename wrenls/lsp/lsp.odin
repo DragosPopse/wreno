@@ -350,7 +350,7 @@ Workspace_Edit :: struct {
 	documentChanges: []Text_Document_Edit,
 }
 
-Response_Params :: struct {
+Response_Params :: union {
 	Response_Initialize_Params, // Note(Dragos): Should we rename this?
 	rawptr,
 	Location,

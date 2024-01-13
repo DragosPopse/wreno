@@ -434,11 +434,13 @@ lsp_logger_proc :: proc(
 
 send :: proc(msg: any, writer: io.Writer) -> bool {
 	data, marshal_error := json.marshal(msg, {}, context.temp_allocator)
-	header := fmt.tprintf("Content-Length: %v\r\n\r\n", len(data))
+	
 	if marshal_error != nil {
 		return false
 	}
 
+	header := fmt.tprintf("Content-Length: %v\r\n\r\n", len(data))
+	
 	if _, err := io.write_string(writer, header); err != nil {
 		return false
 	}

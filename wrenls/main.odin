@@ -18,7 +18,7 @@ import "../wren"
 running := false // Note(Dragos): Move this somewhere else probably. A Server struct maybe?
 
 main :: proc() {
-	fmt.printf("Starting Odin Language Server\n")
+	// fmt.printf("Starting Odin Language Server\n") // For history. This has caused a weeklong connection crash because i forgot that stdio is reserved. OK
 	// Note(Dragos): Temporary reader/writer/logger initialization. We need to figure out how to make this properly threaded
 	reader, reader_ok := io.to_reader(os.stream_from_handle(os.stdin))
 	writer, writer_ok := io.to_writer(os.stream_from_handle(os.stdout))
@@ -38,12 +38,44 @@ main :: proc() {
 	request_thread := thread.create_and_start_with_data(&request_thread_data, request_thread_main)
 	for running {
 		context.logger = logger
+		sync.sema_wait(&requests_sem)
 		// Consume requests
 
-		if sync.guard(&requests_mutex) {
+		// Note(Dragos) from ols: why do we need this temp request things? Doesn't seem to make much sense
+		temp_requests := make([dynamic]Request, 0, context.temp_allocator)
+		sync.mutex_lock(&requests_mutex)
 			for req in requests {
-					
+				append(&temp_requests, req)		
 			}
+
+			request_index := 0
+			for ; request_index < len(temp_requests); request_index += 1 {
+				request := temp_requests[request_index]
+				root := request.value.(json.Object)
+				method := root["method"].(json.String)
+				if method == "initialize" {
+					
+					response: lsp.Response_Message
+					response.jsonrpc = "2.0.0"
+					response.id = root["id"].(json.Integer)
+					response.result = lsp.Initialize_Result {
+						capabilities = {
+							renameProvider = true,
+						},
+					}
+					lsp.send(response, writer)
+					log.info("Holy fuck")
+				}
+				json.destroy_value(request.value) // Note(Dragos): Figure out a better allocation method.
+			}
+
+			for i := 0; i < request_index; i += 1 {
+				pop_front(&requests)
+			}
+		sync.mutex_unlock(&requests_mutex)	
+
+		if request_index != len(temp_requests) {
+			sync.sema_post(&requests_sem)
 		}
 
 		free_all(context.temp_allocator) // Note(Dragos): Is the temp allocator thread_local? I believe so
@@ -105,7 +137,7 @@ request_thread_main :: proc(data: rawptr) {
 			} else {
 				append(&requests, Request{id = id, value = root})
 				sync.sema_post(&requests_sem)
-			} 
+			}
 		}
 
 		free_all(context.temp_allocator)

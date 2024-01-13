@@ -37,6 +37,7 @@ Package :: struct {
 	original     : string,
 }
 
+// Note(Dragos): This is not defined by LSP per se. What should we do?
 Request_Type :: enum {
 	Initialize,
 	Initialized,
@@ -109,11 +110,6 @@ Notification_Publish_Diagnostics_Params :: struct {
 Notification_Logging_Params :: struct {
 	type   : Diagnostic_Severity,
 	message: string,
-}
-
-Notification_Params :: union {
-	Notification_Logging_Params,
-	Notification_Publish_Diagnostics_Params,
 }
 
 Save_Options :: struct {
@@ -355,8 +351,26 @@ Workspace_Edit :: struct {
 	documentChanges: []Text_Document_Edit,
 }
 
+
+Notification_Message :: struct {
+	jsonrpc: string,
+	method : string,
+	params : Notification_Params,
+}
+
+Notification_Params :: union {
+	Notification_Logging_Params,
+	Notification_Publish_Diagnostics_Params,
+}
+
+Response_Message :: struct {
+	jsonrpc: string,
+	id     : Request_Id,
+	result : Response_Params,	
+}
+
 Response_Params :: union {
-	Initialize_Result, // Note(Dragos): Should we rename this?
+	Initialize_Result,
 	rawptr,
 	Location,
 	[]Location,
@@ -372,18 +386,6 @@ Response_Params :: union {
 	Workspace_Edit,
 }
 
-Notification_Message :: struct {
-	jsonrpc: string,
-	method : string,
-	params : Notification_Params,
-}
-
-
-Response_Message :: struct {
-	jsonrpc: string,
-	id: Request_Id,
-	result: Response_Params,
-}
 
 LSP_Logger :: struct {
 	writer: io.Writer,
@@ -427,11 +429,11 @@ lsp_logger_proc :: proc(
 		},
 	}
 
-	send_notification(notif, data.writer)
+	send(notif, data.writer)
 }
 
-send_notification :: proc(notif: Notification_Message, writer: io.Writer) -> bool {
-	data, marshal_error := json.marshal(notif, {}, context.temp_allocator)
+send :: proc(msg: any, writer: io.Writer) -> bool {
+	data, marshal_error := json.marshal(msg, {}, context.temp_allocator)
 	header := fmt.tprintf("Content-Length: %v\r\n\r\n", len(data))
 	if marshal_error != nil {
 		return false
@@ -447,6 +449,7 @@ send_notification :: proc(notif: Notification_Message, writer: io.Writer) -> boo
 
 	return true
 }
+
 
 parse_header :: proc(reader: io.Reader) -> (header: Header, ok: bool) {	
 	sb := strings.builder_make(context.temp_allocator)

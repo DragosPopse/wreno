@@ -111,11 +111,3 @@ request_thread_main :: proc(data: rawptr) {
 		free_all(context.temp_allocator)
 	}
 }
-
-
-
-
-// Note(Dragos): These things will be put in different files, maybe even packages
-// Note(Dragos): This project will eventually be split into jsonrpc, lsp, wrenls packages. 
-// Note(Dragos): Aim to publish jsonrpc and lsp as individual packages. 
-

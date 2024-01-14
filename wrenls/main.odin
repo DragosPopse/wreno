@@ -38,6 +38,7 @@ main :: proc() {
 	request_thread := thread.create_and_start_with_data(&request_thread_data, request_thread_main)
 	for running {
 		context.logger = logger
+		context.assertion_failure_proc = lsp.default_assertion_failure_proc
 		sync.sema_wait(&requests_sem)
 		// Consume requests
 
@@ -54,17 +55,29 @@ main :: proc() {
 				root := request.value.(json.Object)
 				method := root["method"].(json.String)
 				if method == "initialize" {
+					client_params := root["params"].(json.Object)
+					client_info := client_params["clientInfo"].(json.Object)
+					client_name := client_info["name"].(json.String)
+					client_version := client_info["version"].(json.String)
+					client_root_path := client_params["rootPath"].(json.String) // note(dragos): this can be null if the file is open without a folder?
+					client_root_uri := client_params["rootUri"].(json.String)
+					// Todo(Dragos): lsp.Client_Capabilities
 					
 					response: lsp.Response_Message
 					response.jsonrpc = "2.0.0"
 					response.id = root["id"].(json.Integer)
 					response.result = lsp.Initialize_Result {
 						capabilities = {
-							renameProvider = true,
+							semanticTokensProvider = {
+								full = true,
+								range = false, // Note(Dragos): I believe this requires some sort of incremental parsing
+								legend = {}, // Note(Dragos): This needs to be filled in
+							},
 						},
 					}
 					lsp.send(response, writer)
-					log.info("Holy fuck")
+					
+					log.infof("Initialized the language server for '%v'@%v at workspace path '%v'\n", client_name, client_version, client_root_path, client_root_uri)
 				}
 				json.destroy_value(request.value) // Note(Dragos): Figure out a better allocation method.
 			}
@@ -103,6 +116,7 @@ request_thread_main :: proc(data: rawptr) {
 	
 	for running {
 		context.logger = data.logger
+		context.assertion_failure_proc = lsp.default_assertion_failure_proc // Note(Dragos): Figure out a way to set this in a single place.
 		header, header_ok := lsp.parse_header(data.reader)
 		if !header_ok {
 			log.error("Failed to read and parse header")

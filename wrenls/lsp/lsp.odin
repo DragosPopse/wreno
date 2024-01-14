@@ -387,50 +387,6 @@ Response_Params :: union {
 }
 
 
-LSP_Logger :: struct {
-	writer: io.Writer,
-}
-
-lsp_logger :: proc(logger: ^LSP_Logger, 
-	lowest: log.Level = .Debug, 
-	opts: log.Options = log.Default_Console_Logger_Opts
-) -> log.Logger {
-	return {
-		lsp_logger_proc,
-		logger,
-		lowest,
-		opts,
-	}
-}
-
-lsp_logger_proc :: proc(
-	data: rawptr, 
-	level: log.Level, 
-	text: string, 
-	options: log.Options, 
-	location :=  #caller_location
-) {
-	data := cast(^LSP_Logger)data
-	message := fmt.tprintf("%s", text) // Note(Dragos): do we need this???
-	message_type: Diagnostic_Severity
-	switch level {
-	case .Debug:         message_type = .Hint
-	case .Info:          message_type = .Information
-	case .Warning:       message_type = .Warning
-	case .Error, .Fatal: message_type = .Error
-	}
-
-	notif := Notification_Message {
-		jsonrpc = "2.0",
-		method = "window/logMessage",
-		params = Notification_Logging_Params {
-			type = message_type,
-			message = message,
-		},
-	}
-
-	send(notif, data.writer)
-}
 
 send :: proc(msg: any, writer: io.Writer) -> bool {
 	data, marshal_error := json.marshal(msg, {}, context.temp_allocator)

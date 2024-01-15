@@ -5,6 +5,7 @@ import "core:strings"
 import "core:log"
 import "core:fmt"
 import "core:io"
+import "core:os"
 
 LSP_Logger :: struct {
 	writer: io.Writer,
@@ -82,7 +83,15 @@ default_assertion_failure_proc :: proc(prefix, message: string, loc: runtime.Sou
 		strings.write_string(&sb, ": ")
 		strings.write_string(&sb, message)
 	}
-	strings.write_byte(&sb, '\n')
-	log.error(strings.to_string(sb), loc)
+	//strings.write_byte(&sb, '\n')
+	notif := Notification_Message {
+		jsonrpc = "2.0",
+		method = "window/logMessage",
+		params = Notification_Logging_Params {
+			type = .Error,
+			message = strings.to_string(sb),
+		},
+	}
+	send(notif, os.stream_from_handle(os.stderr))
 	runtime.trap() // Note(Dragos): Instead of trapping, maybe we can send an error and shut down the server?
 }

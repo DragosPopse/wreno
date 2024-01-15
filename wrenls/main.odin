@@ -78,6 +78,7 @@ main :: proc() {
 					lsp.send(response, writer)
 					
 					log.infof("Initialized the language server for '%v'@%v at workspace path '%v'\n", client_name, client_version, client_root_path)
+					assert(false, "HAHAHHAHAHAH")
 				}
 				json.destroy_value(request.value) // Note(Dragos): Figure out a better allocation method.
 			}

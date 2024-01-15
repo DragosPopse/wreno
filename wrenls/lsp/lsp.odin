@@ -4,8 +4,13 @@
 	The aim should be to finally separate this in it's own package
 	Note(Dragos): it seems that the types are also defined by name, should we keep it? e.g. CompletionOptions vs Completion_Options
 	Note(Dragos): In addition, should the properties be snake_case in our code and then marshal them to camelCase later?
+	Note(dragos): should we enclose `:?` types into `Maybe` types?
 */
 package lsp
+
+VERSION_MAJ :: 3
+VERSION_MIN :: 17
+VERSION_STR :: "3.17"
 
 import "core:io"
 import "core:encoding/json"
@@ -20,7 +25,9 @@ Request_Id :: union {
 }
 
 
-
+Symbol_Tag :: enum {
+	Deprecated = 1,
+}
 
 Header :: struct {
 	content_length: int,
@@ -264,7 +271,7 @@ Document_Symbol :: struct {
 	name: string,
 	kind: Symbol_Kind,
 	range: Range,
-	selectionRange: Range,
+	selection_range: Range `json:"selectionRange"`,
 	children: []Document_Symbol,
 }
 
@@ -284,12 +291,12 @@ Hover :: struct {
 
 Text_Edit :: struct {
 	range  : Range,
-	newText: string,
+	new_text: string `json:"newText"`,
 }
 
 Insert_Replace_Edit :: struct {
 	insert : Range,
-	newText: string,
+	new_text: string `json:"newText"`,
 	replace: Range,
 }
 
@@ -305,7 +312,7 @@ Inlay_Hint :: struct {
 }
 
 Document_Link_Client_Capabilities :: struct {
-	tooltipSupport: bool,
+	tooltip_support: bool `json:"tooltipSupport"`,
 }
 
 Text_Document_Identifier :: struct {
@@ -386,9 +393,46 @@ Response_Params :: union {
 	Workspace_Edit,
 }
 
+/**
+ * Completion item tags are extra annotations that tweak the rendering of a
+ * completion item.
+ *
+ * @since 3.15.0
+ */
+Completion_Item_Tag :: enum {
+	/**
+	 * Render a completion as obsolete, usually using a strike-out.
+	 */
+	Deprecated = 1,
+}
 
-
-
+/**
+ * How whitespace and indentation is handled during completion
+ * item insertion.
+ *
+ * @since 3.16.0
+ */
+Insert_Text_Mode :: enum {
+	/**
+	 * The insertion or replace strings is taken as it is. If the
+	 * value is multi line the lines below the cursor will be
+	 * inserted using the indentation defined in the string value.
+	 * The client will not apply any kind of adjustments to the
+	 * string.
+	 */
+	As_Is = 1,
+	
+	/**
+	 * The editor adjusts leading whitespace of new lines so that
+	 * they match the indentation up to the cursor of the line for
+	 * which the item is accepted.
+	 *
+	 * Consider a line like this: <2tabs><cursor><3tabs>foo. Accepting a
+	 * multi line completion item is indented using 2 tabs and all
+	 * following lines inserted will be indented using 2 tabs as well.
+	 */
+	Adjust_Indentation = 2,
+}
 
 send :: proc(msg: any, writer: io.Writer) -> bool {
 	data, marshal_error := json.marshal(msg, {}, context.temp_allocator)

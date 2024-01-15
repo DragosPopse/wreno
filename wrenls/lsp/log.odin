@@ -6,6 +6,9 @@ import "core:log"
 import "core:fmt"
 import "core:io"
 import "core:os"
+import "core:thread"
+import "core:sync"
+import "core:time"
 
 LSP_Logger :: struct {
 	writer: io.Writer,
@@ -92,6 +95,8 @@ default_assertion_failure_proc :: proc(prefix, message: string, loc: runtime.Sou
 			message = strings.to_string(sb),
 		},
 	}
-	send(notif, os.stream_from_handle(os.stderr))
-	runtime.trap() // Note(Dragos): Instead of trapping, maybe we can send an error and shut down the server?
+	send(notif, os.stream_from_handle(os.stdout))
+	time.sleep(100 * time.Millisecond) // if this works, i'm going to start doing amphetamines. (it worked). 
+	runtime.trap()
+	// Note(Dragos): sending to stderr seems to not really work for all clients. The better approach would be to save logs to a file.
 }

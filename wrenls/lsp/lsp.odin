@@ -421,7 +421,7 @@ Insert_Text_Mode :: enum {
 	 * string.
 	 */
 	As_Is = 1,
-	
+
 	/**
 	 * The editor adjusts leading whitespace of new lines so that
 	 * they match the indentation up to the cursor of the line for
@@ -432,6 +432,36 @@ Insert_Text_Mode :: enum {
 	 * following lines inserted will be indented using 2 tabs as well.
 	 */
 	Adjust_Indentation = 2,
+}
+
+Prepare_Support_Default_Behavior :: enum {
+	/**
+	 * The client's default behavior is to select the identifier
+	 * according to the language's syntax rule.
+	 */
+	Identifier = 1,
+}
+
+/**
+ * The diagnostic tags.
+ *
+ * @since 3.15.0
+ */
+Diagnostic_Tag :: enum {
+	/**
+	 * Unused or unnecessary code.
+	 *
+	 * Clients are allowed to render diagnostics with this tag faded out
+	 * instead of having an error squiggle.
+	 */
+	Unnecessary = 1,
+
+	/**
+	 * Deprecated or obsolete code.
+	 *
+	 * Clients are allowed to rendered diagnostics with this tag strike through.
+	 */
+	Deprecated = 2,
 }
 
 send :: proc(msg: any, writer: io.Writer) -> bool {

@@ -388,103 +388,591 @@ Hover_Client_Capabilities :: struct {
 }
 
 Signature_Help_Client_Capabilities :: struct {
+	/**
+	 * Whether signature help supports dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 
+	/**
+	 * The client supports the following `Signature_Information`
+	 * specific properties.
+	 */
+	signature_information: Maybe(struct {
+		/**
+		 * Client supports the follow content formats for the documentation
+		 * property. The order describes the preferred format of the client.
+		 */
+		documentation_format: Maybe([]string) `json:"documentationFormat"`,
+
+		/**
+		 * Client capabilities specific to parameter information.
+		 */
+		parameter_information: Maybe(struct {
+			/**
+			 * The client supports processing label offsets instead of a
+			 * simple label string.
+			 *
+			 * @since 3.14.0
+			 */
+			label_offset_support: Maybe(bool) `json:"labelOffsetSupport"`,
+		}) `json:"parameterInformation"`,
+
+		/**
+		 * The client supports the `activeParameter` property on
+		 * `SignatureInformation` literal.
+		 *
+		 * @since 3.16.0
+		 */
+		active_parameter_support: Maybe(bool) `json:"activeParameterSupport"`,
+	}) `json:"signatureInformation"`,
+
+	/**
+	 * The client supports to send additional context information for a
+	 * `textDocument/signatureHelp` request. A client that opts into
+	 * contextSupport will also support the `retriggerCharacters` on
+	 * `Signature_Help_Options`.
+	 *
+	 * @since 3.15.0
+	 */
+	context_support: Maybe(bool) `json:"contextSupport"`,
 }
 
 Declaration_Client_Capabilities :: struct {
+	/**
+	 * Whether declaration supports dynamic registration. If this is set to
+	 * `true` the client supports the new `Declaration_Registration_Options`
+	 * return value for the corresponding server capability as well.
+	 */
+	 dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 
+	 /**
+	 * The client supports additional metadata in the form of declaration links.
+	 */
+	 link_support: Maybe(bool) `json:"linkSupport"`,
+ 
 }
 
 Definition_Client_Capabilities :: struct {
+	/**
+	 * Whether definition supports dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 
+	/**
+	 * The client supports additional metadata in the form of definition links.
+	 *
+	 * @since 3.14.0
+	 */
+	link_support: Maybe(bool) `json:"linkSupport"`,
 }
 
 Type_Definition_Client_Capabilities :: struct {
+	/**
+	 * Whether implementation supports dynamic registration. If this is set to
+	 * `true` the client supports the new `TypeDefinitionRegistrationOptions`
+	 * return value for the corresponding server capability as well.
+	 */
+	 dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 
+	 /**
+	 * The client supports additional metadata in the form of definition links.
+	 *
+	 * @since 3.14.0
+	 */
+	 link_support: Maybe(bool) `json:"linkSupport"`,
 }
 
 Implementation_Client_Capabilities :: struct {
+	/**
+	 * Whether implementation supports dynamic registration. If this is set to
+	 * `true` the client supports the new `ImplementationRegistrationOptions`
+	 * return value for the corresponding server capability as well.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 
+	/**
+	 * The client supports additional metadata in the form of definition links.
+	 *
+	 * @since 3.14.0
+	 */
+	 link_support: Maybe(bool) `json:"linkSupport"`,
 }
 
 Reference_Client_Capabilities :: struct {
-
+	/**
+	 * Whether references supports dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 }
 
 Document_Highlight_Client_Capabilities :: struct {
-
+	/**
+	 * Whether document highlight supports dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 }
 
 Document_Symbol_Client_Capabilities :: struct {
+	/**
+	 * Whether document symbol supports dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 
+	/**
+	 * Specific capabilities for the `SymbolKind` in the
+	 * `textDocument/documentSymbol` request.
+	 */
+	symbol_kind: Maybe(struct {
+		value_set: Maybe([]Symbol_Kind) `json:"valueSet"`,
+	}) `json:"symbolKind"`,
+
+	/**
+	 * The client supports hierarchical document symbols.
+	 */
+	hierarchical_document_symbol_support: Maybe(bool) `json:"hierarchicalDocumentSymbolSupport"`,
+
+	/**
+	 * The client supports tags on `SymbolInformation`. Tags are supported on
+	 * `DocumentSymbol` if `hierarchicalDocumentSymbolSupport` is set to true.
+	 * Clients supporting tags have to handle unknown tags gracefully.
+	 *
+	 * @since 3.16.0
+	 */
+	tag_support: Maybe(struct {
+		value_set: []Symbol_Kind,
+	}) `json:"tagSupport"`,
+
+	/**
+	 * The client supports an additional label presented in the UI when
+	 * registering a document symbol provider.
+	 *
+	 * @since 3.16.0
+	 */
+	label_support: Maybe(bool) `json:"labelSupport"`,
 }
 
 Code_Action_Client_Capabilities :: struct {
+	/**
+	 * Whether code action supports dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 
+	/**
+	 * The client supports code action literals as a valid
+	 * response of the `textDocument/codeAction` request.
+	 *
+	 * @since 3.8.0
+	 */
+	code_action_literal_support: Maybe(struct {
+		/**
+		 * The code action kind is supported with the following value
+		 * set.
+		 */
+		code_action_kind: Maybe(struct {
+			/**
+			 * The code action kind values the client supports. When this
+			 * property exists the client also guarantees that it will
+			 * handle values outside its set gracefully and falls back
+			 * to a default value when unknown.
+			 */
+			value_set: []string `json:"valueSet"`,
+		}) `json:"codeActionKind"`,
+	}) `json:"codeActionLiteralSupport"`,
+
+	/**
+	 * Whether code action supports the `isPreferred` property.
+	 *
+	 * @since 3.15.0
+	 */
+	is_preferred_support: Maybe(bool) `json:"isPreferredSupport"`,
+
+	/**
+	 * Whether code action supports the `disabled` property.
+	 *
+	 * @since 3.16.0
+	 */
+	disabled_support: Maybe(bool) `json:"disabledSupport"`,
+
+	/**
+	 * Whether code action supports the `data` property which is
+	 * preserved between a `textDocument/codeAction` and a
+	 * `codeAction/resolve` request.
+	 *
+	 * @since 3.16.0
+	 */
+	data_support: Maybe(bool) `json:"dataSupport"`,
+
+	/**
+	 * Whether the client supports resolving additional code action
+	 * properties via a separate `codeAction/resolve` request.
+	 *
+	 * @since 3.16.0
+	 */
+	resolve_support: Maybe(struct {
+		/**
+		 * The properties that a client can resolve lazily.
+		 */
+		properties: []string,
+	}) `json:"resolveSupport"`,
+
+	/**
+	 * Whether the client honors the change annotations in
+	 * text edits and resource operations returned via the
+	 * `CodeAction#edit` property by for example presenting
+	 * the workspace edit in the user interface and asking
+	 * for confirmation.
+	 *
+	 * @since 3.16.0
+	 */
+	honors_change_annotations: Maybe(bool) `json:"honorsChangeAnnotations"`,
 }
 
 Document_Color_Client_Capabilities :: struct {
-
+	/**
+	 * Whether document color supports dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 }
 
 Document_Formatting_Client_Capabilities :: struct {
-
+	/**
+	 * Whether formatting supports dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 }
 
 Document_Range_Formatting_Client_Capabilities :: struct {
-
+	/**
+	 * Whether formatting supports dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 }
 
 Document_On_Type_Formatting_Client_Capabilities :: struct {
+	/**
+	 * A character on which formatting should be triggered, like `{`.
+	 */
+	first_trigger_character: string `json:"firstTriggerCharacter"`,
 
+	/**
+	 * More trigger characters.
+	 */
+	more_trigger_character: Maybe([]string) `json:"moreTriggerCharacter"`,
 }
 
 Rename_Client_Capabilities :: struct {
+	/**
+	 * Whether rename supports dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 
+	/**
+	 * Client supports testing for validity of rename operations
+	 * before execution.
+	 *
+	 * @since version 3.12.0
+	 */
+	prepare_support: Maybe(bool) `json:"prepareSupport"`,
+
+	/**
+	 * Client supports the default behavior result
+	 * (`{ defaultBehavior: boolean }`).
+	 *
+	 * The value indicates the default behavior used by the
+	 * client.
+	 *
+	 * @since version 3.16.0
+	 */
+	prepare_support_default_behavior: Maybe(Prepare_Support_Default_Behavior) `json:"prepareSupportDefaultBehavior"`,
+
+	/**
+	 * Whether the client honors the change annotations in
+	 * text edits and resource operations returned via the
+	 * rename request's workspace edit by for example presenting
+	 * the workspace edit in the user interface and asking
+	 * for confirmation.
+	 *
+	 * @since 3.16.0
+	 */
+	honors_change_annotations: Maybe(bool) `json:"honorsChangeAnnotations"`,
 }
 
 Publish_Diagnostics_Client_Capabilities :: struct {
-	
+	/**
+	 * Whether the clients accepts diagnostics with related information.
+	 */
+	related_information: Maybe(bool) `json:"relatedInformation"`,
+
+	/**
+	 * Client supports the tag property to provide meta data about a diagnostic.
+	 * Clients supporting tags have to handle unknown tags gracefully.
+	 *
+	 * @since 3.15.0
+	 */
+	tag_support: Maybe(struct {
+		/**
+		 * The tags supported by the client.
+		 */
+		value_set: []Diagnostic_Tag `json:"valueSet"`,
+	}) `json:"tagSupport"`,
+
+	/**
+	 * Whether the client interprets the version property of the
+	 * `textDocument/publishDiagnostics` notification's parameter.
+	 *
+	 * @since 3.15.0
+	 */
+	version_support: Maybe(bool) `json:"versionSupport"`,
+
+	/**
+	 * Client supports a codeDescription property
+	 *
+	 * @since 3.16.0
+	 */
+	code_description_support: Maybe(bool) `json:"codeDescriptionSupport"`,
+
+	/**
+	 * Whether code action supports the `data` property which is
+	 * preserved between a `textDocument/publishDiagnostics` and
+	 * `textDocument/codeAction` request.
+	 *
+	 * @since 3.16.0
+	 */
+	data_support: Maybe(bool) `json:"dataSupport"`,
 }
 
 Folding_Range_Client_Capabilities :: struct {
-	
+	/**
+	 * Whether implementation supports dynamic registration for folding range
+	 * providers. If this is set to `true` the client supports the new
+	 * `FoldingRangeRegistrationOptions` return value for the corresponding
+	 * server capability as well.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+
+	/**
+	 * The maximum number of folding ranges that the client prefers to receive
+	 * per document. The value serves as a hint, servers are free to follow the
+	 * limit.
+	 */
+	range_limit: Maybe(int) `json:"rangeLimit"`,
+
+	/**
+	 * If set, the client signals that it only supports folding complete lines.
+	 * If set, client will ignore specified `startCharacter` and `endCharacter`
+	 * properties in a FoldingRange.
+	 */
+	line_folding_only: Maybe(bool) `json:"lineFoldingOnly"`,
+
+	/**
+	 * Specific options for the folding range kind.
+	 *
+	 * @since 3.17.0
+	 */
+	folding_range_kind: Maybe(struct {
+		/**
+		 * The folding range kind values the client supports. When this
+		 * property exists the client also guarantees that it will
+		 * handle values outside its set gracefully and falls back
+		 * to a default value when unknown.
+		 */
+		value_set: Maybe([]string) `json:"valueSet"`,
+	}) `json:"foldingRangeKind"`,
+
+	/**
+	 * Specific options for the folding range.
+	 * @since 3.17.0
+	 */
+	folding_range: Maybe(struct {
+		/**
+		 * If set, the client signals that it supports setting collapsedText on
+		 * folding ranges to display custom labels instead of the default text.
+		 *
+		 * @since 3.17.0
+		 */
+		collapsed_text: Maybe(bool) `json:"collapsedText"`,
+	}) `json:"foldingRange"`,
 }
 
 Selection_Range_Client_Capabilities :: struct {
-
+	/**
+	 * Whether implementation supports dynamic registration for selection range
+	 * providers. If this is set to `true` the client supports the new
+	 * `SelectionRangeRegistrationOptions` return value for the corresponding
+	 * server capability as well.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 }
 
 Linked_Editing_Range_Client_Capabilities :: struct {
-	
+	/**
+	 * Whether the implementation supports dynamic registration.
+	 * If this is set to `true` the client supports the new
+	 * `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+	 * return value for the corresponding server capability as well.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 }
 
 Call_Hierarchy_Client_Capabilities :: struct {
-
+	/**
+	 * Whether implementation supports dynamic registration. If this is set to
+	 * `true` the client supports the new `(Text_Document_Registration_Options &
+	 * Static_Registration_Options)` return value for the corresponding server
+	 * capability as well.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 }
 
 Semantic_Tokens_Client_Capabilities :: struct {
+	/**
+	 * Whether implementation supports dynamic registration. If this is set to
+	 * `true` the client supports the new `(Text_Document_Registration_Options &
+	 * Static_Registration_Options)` return value for the corresponding server
+	 * capability as well.
+	 */
+	dynamic_registration: Maybe(string) `json:"dynamicRegistration"`,
 
+	/**
+	 * Which requests the client supports and might send to the server
+	 * depending on the server's capability. Please note that clients might not
+	 * show semantic tokens or degrade some of the user experience if a range
+	 * or full request is advertised by the client but not provided by the
+	 * server. If for example the client capability `requests.full` and
+	 * `request.range` are both set to true but the server only provides a
+	 * range provider the client might not render a minimap correctly or might
+	 * even decide to not show any semantic tokens at all.
+	 */
+	requests: struct {
+		/**
+		 * The client will send the `textDocument/semanticTokens/range` request
+		 * if the server provides a corresponding handler.
+		 */
+		range: Maybe(union {bool, struct{}}), // Note(Dragos): What the fuck is this.
+
+		/**
+		 * The client will send the `textDocument/semanticTokens/full` request
+		 * if the server provides a corresponding handler.
+		 */
+		full: Maybe(union {bool, struct { // Note(Dragos): psychotic
+			/**
+			 * The client will send the `textDocument/semanticTokens/full/delta`
+			 * request if the server provides a corresponding handler.
+			 */
+			delta: Maybe(bool),
+		}}),
+	},
+
+	/**
+	 * The token types that the client supports.
+	 */
+	token_types: []string `json:"tokenTypes"`,
+
+	/**
+	 * The token modifiers that the client supports.
+	 */
+	token_modifiers: []string `json:"tokenModifiers"`,
+
+	/**
+	 * The formats the clients supports.
+	 */
+	formats: []string,
+
+	/**
+	 * Whether the client supports tokens that can overlap each other.
+	 */
+	overlapping_token_support: Maybe(bool) `json:"overlappingTokenSupport"`,
+
+	/**
+	 * Whether the client supports tokens that can span multiple lines.
+	 */
+	multiline_token_support: Maybe(bool) `json:"multilineTokenSupport"`,
+
+	/**
+	 * Whether the client allows the server to actively cancel a
+	 * semantic token request, e.g. supports returning
+	 * ErrorCodes.ServerCancelled. If a server does the client
+	 * needs to retrigger the request.
+	 *
+	 * @since 3.17.0
+	 */
+	server_cancel_support: Maybe(bool) `json:"serverCancelSupport"`,
+
+	/**
+	 * Whether the client uses semantic tokens to augment existing
+	 * syntax tokens. If set to `true` client side created syntax
+	 * tokens and semantic tokens are both used for colorization. If
+	 * set to `false` the client only uses the returned semantic tokens
+	 * for colorization.
+	 *
+	 * If the value is `undefined` then the client behavior is not
+	 * specified.
+	 *
+	 * @since 3.17.0
+	 */
+	augments_syntax_tokens: Maybe(bool) `json:"augmentsSyntaxTokens"`,
 }
 
 Moniker_Client_Capabilities :: struct {
-
+	/**
+	 * Whether implementation supports dynamic registration. If this is set to
+	 * `true` the client supports the new `(TextDocumentRegistrationOptions &
+	 * StaticRegistrationOptions)` return value for the corresponding server
+	 * capability as well.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 }
 
 Type_Hierarchy_Client_Capabilities :: struct {
-
+	/**
+	 * Whether implementation supports dynamic registration. If this is set to
+	 * `true` the client supports the new `(TextDocumentRegistrationOptions &
+	 * StaticRegistrationOptions)` return value for the corresponding server
+	 * capability as well.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`
 }
 
 Inline_Value_Client_Capabilities :: struct {
-
+	/**
+	 * Whether implementation supports dynamic registration for inline
+	 * value providers.
+	 */
+	 dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 }
 
 Inlay_Hint_Client_Capabilities :: struct {
+	/**
+	 * Whether inlay hints support dynamic registration.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 
+	/**
+	 * Indicates which properties a client can resolve lazily on an inlay
+	 * hint.
+	 */
+	resolve_support: Maybe(struct {
+		/**
+		 * The properties that a client can resolve lazily.
+		 */
+		properties: []string,
+	}) `json:"resolveSupport"`,
 }
 
 Diagnostic_Client_Capabilities :: struct {
-	
+	/**
+	 * Whether implementation supports dynamic registration. If this is set to
+	 * `true` the client supports the new
+	 * `(Text_Document_Registration_Options & Static_Registration_Options)`
+	 * return value for the corresponding server capability as well.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+
+	/**
+	 * Whether the clients supports related documents for document diagnostic
+	 * pulls.
+	 */
+	related_document_support: Maybe(bool) `json:"relatedDocumentSupport"`,
 }
 
 /**
@@ -664,24 +1152,103 @@ Text_Document_Client_Capabilities :: struct {
 	diagnostic: Maybe(Diagnostic_Client_Capabilities),
 }
 
+Notebook_Document_Sync_Client_Capabilities :: struct {
+	/**
+	 * Whether implementation supports dynamic registration. If this is
+	 * set to `true` the client supports the new
+	 * `(NotebookDocumentSyncRegistrationOptions & NotebookDocumentSyncOptions)`
+	 * return value for the corresponding server capability as well.
+	 */
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+
+	/**
+	 * The client supports sending execution summary data per cell.
+	 */
+	execution_summary_support: Maybe(bool) `json:"executionSummarySupport"`,
+}
+
+/**
+ * Capabilities specific to the notebook document support.
+ *
+ * @since 3.17.0
+ */
 Notebook_Document_Client_Capabilities :: struct {
-	
+	/**
+	 * Capabilities specific to notebook document synchronization
+	 *
+	 * @since 3.17.0
+	 */
+	synchronization: Maybe(Notebook_Document_Sync_Client_Capabilities),
 }
 
+/**
+ * Show message request client capabilities
+ */
 Show_Message_Request_Client_Capabilities :: struct {
-
+	/**
+	 * Capabilities specific to the `MessageActionItem` type.
+	 */
+	message_action_item: Maybe(struct {
+		/**
+		 * Whether the client supports additional attributes which
+		 * are preserved and sent back to the server in the
+		 * request's response.
+		 */
+		additional_properties_support: Maybe(bool) `json:"additionalPropertiesSupport"`,
+	}) `json:"messageActionItem"`,
 }
 
+/**
+ * Client capabilities for the show document request.
+ *
+ * @since 3.16.0
+ */
 Show_Document_Client_Capabilities :: struct {
-
+	/**
+	 * The client has support for the show document
+	 * request.
+	 */
+	support: bool, // Note(Dragos): this is so cool that you wrap this in a struct { bool }
 }
 
+/**
+ * Client capabilities specific to regular expressions.
+ */
 Regular_Expressions_Client_Capabilities :: struct {
+	/**
+	 * The engine's name.
+	 */
+	engine: string,
 
+	/**
+	 * The engine's version.
+	 */
+	version: Maybe(string),
 }
 
+/**
+ * Client capabilities specific to the used markdown parser.
+ *
+ * @since 3.16.0
+ */
 Markdown_Client_Capabilities :: struct {
+	/**
+	 * The name of the parser.
+	 */
+	parser: string,
+	
+	/**
+	 * The version of the parser.
+	 */
+	version: Maybe(string),
 
+	/**
+	 * A list of HTML tags that the client allows / supports in
+	 * Markdown.
+	 *
+	 * @since 3.17.0
+	 */
+	allowed_tags: Maybe([]string) `json:"allowedTags"`,
 }
 
 Client_Capabilities :: struct {

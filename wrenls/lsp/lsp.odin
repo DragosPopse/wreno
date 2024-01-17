@@ -19,6 +19,10 @@ import "core:strconv"
 import "core:fmt"
 import "core:log"
 
+Type_Hierarchy_Item :: struct {
+	// todo
+}
+
 Request_Id :: union {
 	string,
 	i64,
@@ -109,15 +113,7 @@ Diagnostic :: struct {
 	message : string,
 }
 
-Notification_Publish_Diagnostics_Params :: struct {
-	uri        : string,
-	diagnostics: []Diagnostic,
-}
 
-Notification_Logging_Params :: struct {
-	type   : Diagnostic_Severity,
-	message: string,
-}
 
 Save_Options :: struct {
 	includeText: bool,
@@ -329,10 +325,6 @@ Document_Link :: struct {
 	tooltip: string,
 }
 
-Workspace_Symbol_Params :: struct {
-	query: string,
-}
-
 Workspace_Symbol :: struct {
 	name: string,
 	kind: Symbol_Kind,
@@ -359,16 +351,7 @@ Workspace_Edit :: struct {
 }
 
 
-Notification_Message :: struct {
-	jsonrpc: string,
-	method : string,
-	params : Notification_Params,
-}
 
-Notification_Params :: union {
-	Notification_Logging_Params,
-	Notification_Publish_Diagnostics_Params,
-}
 
 Error_Code :: enum {
 	// Defined by JSON-RPC

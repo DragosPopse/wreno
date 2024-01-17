@@ -45,10 +45,10 @@ logger_proc :: proc(
 ) {
 	logger := cast(^Logger)data
 	message := text
-	message_type: Diagnostic_Severity
+	message_type: Message_Type
 	switch level {
-	case .Debug:         message_type = .Hint
-	case .Info:          message_type = .Information
+	case .Debug:         message_type = .Log
+	case .Info:          message_type = .Info
 	case .Warning:       message_type = .Warning
 	case .Error, .Fatal: message_type = .Error
 	}
@@ -56,7 +56,7 @@ logger_proc :: proc(
 	notif := Notification_Message {
 		jsonrpc = "2.0",
 		method = "window/logMessage",
-		params = Notification_Logging_Params {
+		params = Log_Message_Params {
 			type = message_type,
 			message = message,
 		},
@@ -100,7 +100,7 @@ default_assertion_failure_proc :: proc(prefix, message: string, loc: runtime.Sou
 	notif := Notification_Message {
 		jsonrpc = "2.0",
 		method = "window/logMessage",
-		params = Notification_Logging_Params {
+		params = Log_Message_Params {
 			type = .Error,
 			message = strings.to_string(sb),
 		},

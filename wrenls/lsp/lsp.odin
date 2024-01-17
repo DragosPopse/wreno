@@ -579,7 +579,7 @@ parse_header :: proc(reader: io.Reader) -> (header: Header, ok: bool) {
 	return header, found_content_length
 }
 
-parse_body :: proc(reader: io.Reader, header: Header, allocator := context.allocator) -> (json.Value, bool) {
+parse_body :: proc(reader: io.Reader, header: Header, allocator := context.allocator) -> (json.Object, bool) {
 	data := make([]u8, header.content_length, context.temp_allocator)
 	if _, err := io.read(reader, data); err != nil {
 		log.error("Failed to read body")
@@ -590,5 +590,5 @@ parse_body :: proc(reader: io.Reader, header: Header, allocator := context.alloc
 		log.error("Failed to parse body")
 		return nil, false
 	}
-	return value, true
+	return value.(json.Object), true
 }

@@ -19,6 +19,15 @@ running := false // Note(Dragos): Move this somewhere else probably. A Server st
 
 logger: lsp.Logger
 
+callback_initialize :: proc(id: lsp.Request_Id, params: any, writer: io.Writer) {
+	params := params.(lsp.Initialize_Params)
+	response: lsp.Response_Message
+	response.jsonrpc = "2.0.0"
+	response.id = id // note(dragos): these things need to be automated
+
+
+}
+
 main :: proc() {
 	// fmt.printf("Starting Odin Language Server\n") // For history. This has caused a weeklong connection crash because i forgot that stdio is reserved. OK
 	// Note(Dragos): Temporary reader/writer/logger initialization. We need to figure out how to make this properly threaded
@@ -28,6 +37,8 @@ main :: proc() {
 	assert(reader_ok, "Cannot create reader")
 	assert(writer_ok, "Cannot create writer")
 	running = true
+
+	//lsp.register_request_callback("initialize", callback_initialize)
 
 	request_thread_data := Request_Thread_Data {
 		reader = reader,// Note(Dragos): Need to figure out storage of these
@@ -128,11 +139,7 @@ request_thread_main :: proc(data: rawptr) {
 			return // Note(Dragos): These returns seem...crashful
 		}
 
-		root, root_is_object := body.(json.Object)
-		if !root_is_object {
-			log.error("No root object")
-			return
-		}
+		root := body
 
 		id: lsp.Request_Id
 		id_value, id_value_exists := root["id"]

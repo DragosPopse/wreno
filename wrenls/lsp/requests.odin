@@ -17,21 +17,9 @@ Workspace_Folder :: struct {
 
 Request_Message :: struct {
 	jsonrpc: string,
-	
-	/**
-	 * The request id.
-	 */
-	id: Request_Id,
-
-	/**
-	 * The method to be invoked.
-	 */
-	method: string,
-
-	/**
-	 * The method's params.
-	 */
-	params: Request_Params,
+	id     : Request_Id,
+	method : string,
+	params : Request_Params,
 }
 
 Work_Done_Progress_Create_Params :: struct {

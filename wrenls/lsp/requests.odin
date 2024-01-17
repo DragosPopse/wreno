@@ -482,7 +482,7 @@ Show_Document_Params :: struct {
 	selection: Maybe(Range),
 }
 
-
+// note(Dragos): maybe this is not needed after all.
 // Note(Dragos): Some requests are sent from server to client only, while some (most) are sent from client to server.
 // we need a way to figure out how to get everything correctly setup in terms of API. I am not sure i currently like this approach
 Request_Params :: union {

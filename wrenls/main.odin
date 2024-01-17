@@ -24,9 +24,6 @@ main :: proc() {
 	// Note(Dragos): Temporary reader/writer/logger initialization. We need to figure out how to make this properly threaded
 	reader, reader_ok := io.to_reader(os.stream_from_handle(os.stdin))
 	writer, writer_ok := io.to_writer(os.stream_from_handle(os.stdout))
-	lsp_log: lsp.LSP_Logger
-	lsp_log.writer = writer
-	//logger := lsp.lsp_logger(&lsp_log)
 	lsp.logger_init(&logger, .Debug, writer, writer)
 	assert(reader_ok, "Cannot create reader")
 	assert(writer_ok, "Cannot create writer")

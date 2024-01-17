@@ -7,6 +7,7 @@ Workspace_Edit_Client_Capabilities :: struct {
 	 * The client supports versioned document changes in `Workspace_Edit`s
 	 */
 	document_changes: Maybe(bool) `json:"documentChanges"`,
+
 	/**
 	 * The resource operations the client supports. Clients should at least
 	 * support 'create', 'rename' and 'delete' files and folders.
@@ -14,6 +15,7 @@ Workspace_Edit_Client_Capabilities :: struct {
 	 * @since 3.13.0
 	 */
 	resource_operations: Maybe([]string) `json:"resourceOperations""`, // Todo(Dragos): Turn this into an enum on parse
+	
 	/**
 	 * The failure handling strategy of a client if applying the workspace edit
 	 * fails.
@@ -21,6 +23,7 @@ Workspace_Edit_Client_Capabilities :: struct {
 	 * @since 3.13.0
 	 */
 	failure_handling: Maybe(string) `json"failureHandling"`,
+	
 	/**
 	 * Whether the client normalizes line endings to the client specific
 	 * setting.
@@ -30,6 +33,7 @@ Workspace_Edit_Client_Capabilities :: struct {
 	 * @since 3.16.0
 	 */
 	normalizes_line_endings: Maybe(bool) `json:"normalizesLineEndings"`,
+	
 	/**
 	 * Whether the client in general supports change annotations on text edits,
 	 * create file, rename file and delete file changes.
@@ -60,7 +64,8 @@ Did_Change_Watched_Files_Client_Capabilities :: struct {
 	 * configuration for file changes from the server side.
 	 */
 	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
-	/**
+	
+	 /**
 	 * Whether the client has support for relative patterns
 	 * or not.
 	 *

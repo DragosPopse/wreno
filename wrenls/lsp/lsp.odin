@@ -370,10 +370,118 @@ Notification_Params :: union {
 	Notification_Publish_Diagnostics_Params,
 }
 
+Error_Code :: enum {
+	// Defined by JSON-RPC
+	Parse_Error      = -32700,
+	Invalid_Request  = -32600,
+	Method_Not_Found = -32601,
+	Invalid_Params   = -32602,
+	Internal_Error   = -32603,
+
+	/**
+	 * This is the range of JSON-RPC reserved error codes.
+	 * It doesn't denote a real error code. No LSP error codes should
+	 * be defined between the start and end range. For backwards
+	 * compatibility the `ServerNotInitialized` and the `UnknownErrorCode`
+	 * are left in the range.
+	 *
+	 * @since 3.16.0
+	 */
+	JSONRPC_Reserved_Error_Range_Start = -32099,
+	Server_Not_Initialized             = -32002,
+	Unknown_Error_Code                 = -32001,
+	JSONRPC_Reserved_Error_Range_End   = -32000,
+
+	/**
+	 * This is the start range of LSP reserved error codes.
+	 * It doesn't denote a real error code.
+	 *
+	 * @since 3.16.0
+	 */
+	LSP_Reserved_Error_Range_Start = -32899,
+
+	/**
+	 * A request failed but it was syntactically correct, e.g the
+	 * method name was known and the parameters were valid. The error
+	 * message should contain human readable information about why
+	 * the request failed.
+	 *
+	 * @since 3.17.0
+	 */
+	Request_Failed = -32803,
+
+	/**
+	 * The server cancelled the request. This error code should
+	 * only be used for requests that explicitly support being
+	 * server cancellable.
+	 *
+	 * @since 3.17.0
+	 */
+	Server_Cancelled = -32802,
+
+	/**
+	 * The server detected that the content of a document got
+	 * modified outside normal conditions. A server should
+	 * NOT send this error code if it detects a content change
+	 * in it unprocessed messages. The result even computed
+	 * on an older state might still be useful for the client.
+	 *
+	 * If a client decides that a result is not of any use anymore
+	 * the client should cancel the request.
+	 */
+	Content_Modified = -32801,
+
+	/**
+	 * The client has canceled a request and a server has detected
+	 * the cancel.
+	 */
+	Request_Cancelled = -32800,
+
+	/**
+	 * This is the end range of LSP reserved error codes.
+	 * It doesn't denote a real error code.
+	 *
+	 * @since 3.16.0
+	 */
+	LSP_Reserved_Error_Range_End = -32800,
+}
+
+Response_Error :: struct {
+	/**
+	 * A number indicating the error type that occurred.
+	 */
+	code: Error_Code,
+
+	/**
+	 * A string providing a short description of the error.
+	 */
+	message: string,
+
+	/**
+	 * A primitive or structured value that contains additional
+	 * information about the error. Can be omitted.
+	 */
+	data: Maybe(json.Value),
+}
+
 Response_Message :: struct {
 	jsonrpc: string,
-	id     : Request_Id,
-	result : Response_Params,	
+
+	/**
+	 * The request id.
+	 */
+	id: Request_Id,
+
+	/**
+	 * The result of a request. This member is REQUIRED on success.
+	 * This member MUST NOT exist if there was an error invoking the method.
+	 */
+	result: Response_Params,
+
+	/**
+	 * The error object in case a request fails.
+	 */
+	error: Maybe(Response_Error),
 }
 
 Response_Params :: union {

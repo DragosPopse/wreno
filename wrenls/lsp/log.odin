@@ -10,9 +10,6 @@ import "core:thread"
 import "core:sync"
 import "core:time"
 
-LSP_Logger :: struct {
-	writer: io.Writer,
-}
 
 Logger :: struct {
 	#subtype core_logger: log.Logger,
@@ -22,9 +19,12 @@ Logger :: struct {
 	},
 }
 
+// Note(Dragos): these are handled by us. We dont' handle anything yet. Maybe remove these.
 DEFAULT_LOGGER_OPTS := log.Options {
 	.Level,
 	.Terminal_Color,
+	.Procedure,
+	.Line,
 }
 
 logger_init :: proc(result: ^Logger, lower_level: log.Level, out: io.Writer, err: Maybe(io.Writer) = nil, opts := DEFAULT_LOGGER_OPTS) {

@@ -836,7 +836,7 @@ Semantic_Tokens_Client_Capabilities :: struct {
 	 * Static_Registration_Options)` return value for the corresponding server
 	 * capability as well.
 	 */
-	dynamic_registration: Maybe(string) `json:"dynamicRegistration"`,
+	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
 
 	/**
 	 * Which requests the client supports and might send to the server

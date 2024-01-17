@@ -17,6 +17,8 @@ import "../wren"
 
 running := false // Note(Dragos): Move this somewhere else probably. A Server struct maybe?
 
+logger: lsp.Logger
+
 main :: proc() {
 	// fmt.printf("Starting Odin Language Server\n") // For history. This has caused a weeklong connection crash because i forgot that stdio is reserved. OK
 	// Note(Dragos): Temporary reader/writer/logger initialization. We need to figure out how to make this properly threaded
@@ -24,7 +26,8 @@ main :: proc() {
 	writer, writer_ok := io.to_writer(os.stream_from_handle(os.stdout))
 	lsp_log: lsp.LSP_Logger
 	lsp_log.writer = writer
-	logger := lsp.lsp_logger(&lsp_log)
+	//logger := lsp.lsp_logger(&lsp_log)
+	lsp.logger_init(&logger, .Debug, writer, writer)
 	assert(reader_ok, "Cannot create reader")
 	assert(writer_ok, "Cannot create writer")
 	running = true

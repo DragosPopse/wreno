@@ -14,26 +14,36 @@ LSP_Logger :: struct {
 	writer: io.Writer,
 }
 
-lsp_logger :: proc(logger: ^LSP_Logger, 
-	lowest: log.Level = .Debug, 
-	opts: log.Options = log.Default_Console_Logger_Opts
-) -> log.Logger {
-	return {
-		lsp_logger_proc,
-		logger,
-		lowest,
-		opts,
-	}
+Logger :: struct {
+	#subtype core_logger: log.Logger,
+	using data: struct {
+		out: io.Writer,
+		err: io.Writer,
+	},
 }
 
-lsp_logger_proc :: proc(
+DEFAULT_LOGGER_OPTS := log.Options {
+	.Level,
+	.Terminal_Color,
+}
+
+logger_init :: proc(result: ^Logger, lower_level: log.Level, out: io.Writer, err: Maybe(io.Writer) = nil, opts := DEFAULT_LOGGER_OPTS) {
+	result.out = out
+	result.err = err.? or_else out
+	result.core_logger.lowest_level = lower_level
+	result.core_logger.options = opts
+	result.core_logger.data = result // Note(Dragos): does this work?
+	result.core_logger.procedure = logger_proc
+}
+
+logger_proc :: proc(
 	data: rawptr, 
 	level: log.Level, 
 	text: string, 
 	options: log.Options, 
 	location :=  #caller_location
 ) {
-	data := cast(^LSP_Logger)data
+	logger := cast(^Logger)data
 	message := text
 	message_type: Diagnostic_Severity
 	switch level {
@@ -52,7 +62,7 @@ lsp_logger_proc :: proc(
 		},
 	}
 
-	send(notif, data.writer)
+	send(notif, logger.out if level < .Error else logger.err)
 }
 
 

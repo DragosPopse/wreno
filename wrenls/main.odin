@@ -20,12 +20,21 @@ running := false // Note(Dragos): Move this somewhere else probably. A Server st
 logger: lsp.Logger
 
 callback_initialize :: proc(id: lsp.Request_Id, params: any, writer: io.Writer) {
-	params := params.(lsp.Initialize_Params)
+	params, params_ok := params.(lsp.Initialize_Params)
 	response: lsp.Response_Message
 	response.jsonrpc = "2.0.0"
-	response.id = id // note(dragos): these things need to be automated
-
-
+	response.id = id
+	response.result = lsp.Initialize_Result {
+		capabilities = {
+			semanticTokensProvider = {
+				full = true,
+				range = false, // Note(Dragos): I believe this requires some sort of incremental parsing
+				legend = {}, // Note(Dragos): This needs to be filled in
+			},
+		},
+	}
+	lsp.send(response, writer)
+	log.infof("Initialized the language server")
 }
 
 main :: proc() {
@@ -63,7 +72,9 @@ main :: proc() {
 			request_index := 0
 			for ; request_index < len(temp_requests); request_index += 1 {
 				request := temp_requests[request_index]
+				
 				root := request.value.(json.Object)
+				//lsp.handle_json_message(root, writer)
 				method := root["method"].(json.String)
 				if method == "initialize" {
 					client_params := root["params"].(json.Object)

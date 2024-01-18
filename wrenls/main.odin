@@ -20,7 +20,7 @@ running := false // Note(Dragos): Move this somewhere else probably. A Server st
 logger: lsp.Logger
 
 callback_initialize :: proc(id: lsp.Request_Id, params: any, writer: io.Writer) {
-	params, params_ok := params.(^lsp.Initialize_Params)
+	params, params_ok := params.(lsp.Initialize_Params)
 	response: lsp.Response_Message
 	response.jsonrpc = "2.0.0"
 	response.id = id
@@ -38,7 +38,7 @@ callback_initialize :: proc(id: lsp.Request_Id, params: any, writer: io.Writer) 
 	client_name := client_info.name
 	client_version := client_info.version.? or_else "<undefined>"
 	client_root_path := params.root_path.? or_else ""
-	log.infof("Initialized the language server for '%v'@%v at workspace path '%v'\n", client_name, client_version, client_root_path)
+	log.infof("Initialized the language server for '%v'@%v at workspace path '%v'", client_name, client_version, client_root_path)
 }
 
 main :: proc() {

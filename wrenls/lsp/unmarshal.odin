@@ -16,8 +16,12 @@ json_get_maybe :: proc(obj: json.Object, field: string, $as_type: typeid) -> (Ma
 	return nil
 }
 
+// rules
+// temp-allocate the return value
+// return it as a value, by derefencing the allocated pointer
 Unmarshal_Proc :: #type proc(value: json.Value) -> any
 
+// todo(dragos): unfinished
 unmarshal_Initialize_Params :: proc(value: json.Value) -> any {
 	params := new(Initialize_Params, context.temp_allocator)
 	obj := value.(json.Object) or_return
@@ -90,7 +94,7 @@ unmarshal_Initialize_Params :: proc(value: json.Value) -> any {
 		}
 	}
 	
-	return params
+	return params^
 }
 
 unmarshal_map := map[typeid]Unmarshal_Proc {

@@ -9,7 +9,6 @@ import "core:mem"
 //  so we'd need a better naming convention for being able to create both clients and servers with this pattern
 // Note(Dragos): we want to remove the writer dependency probably. 
 // Note(Dragos): we need to handle errors too
-// Note(Dragos): I'd like to have the params be an `any` type, and do some allocation magic on them so we can remove some boilerplate
 Request_Callback :: #type proc(id: Request_Id, params: any, writer: io.Writer)
 
 Request_Info :: struct {

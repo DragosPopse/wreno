@@ -47,7 +47,7 @@ main :: proc() {
 	assert(writer_ok, "Cannot create writer")
 	running = true
 
-	//lsp.register_request_callback("initialize", callback_initialize)
+	lsp.register_request_callback("initialize", callback_initialize)
 
 	request_thread_data := Request_Thread_Data {
 		reader = reader,// Note(Dragos): Need to figure out storage of these
@@ -72,9 +72,8 @@ main :: proc() {
 			request_index := 0
 			for ; request_index < len(temp_requests); request_index += 1 {
 				request := temp_requests[request_index]
-				
+				/*
 				root := request.value.(json.Object)
-				//lsp.handle_json_message(root, writer)
 				method := root["method"].(json.String)
 				if method == "initialize" {
 					client_params := root["params"].(json.Object)
@@ -101,6 +100,9 @@ main :: proc() {
 					
 					log.infof("Initialized the language server for '%v'@%v at workspace path '%v'\n", client_name, client_version, client_root_path)
 				}
+				*/
+				root := request.value.(json.Object)
+				lsp.handle_json_message(root, writer)
 				json.destroy_value(request.value) // Note(Dragos): Figure out a better allocation method.
 			}
 

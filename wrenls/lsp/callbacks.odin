@@ -26,7 +26,7 @@ request_map := map[string]Request_Info {
 }
 
 register_request_callback :: proc(method: string, callback: Request_Callback) -> (ok: bool) {
-	info := request_map[method] or_return
+	info := (&request_map[method]) or_return
 	info.callback = callback
 	return true
 }

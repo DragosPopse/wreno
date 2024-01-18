@@ -48,7 +48,7 @@ Initialize_Params :: struct {
 	 * process is not alive then the server should exit (see exit notification)
 	 * its process.
 	 */
-	process_id: Maybe(int) `json:"processId"`,
+	process_id: Maybe(i64) `json:"processId"`,
 
 	/**
 	 * Information about the client

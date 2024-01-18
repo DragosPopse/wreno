@@ -45,20 +45,12 @@ handle_json_message :: proc(msg: json.Object, writer: io.Writer) {
 			case i64: id = v
 			case: log.error("Failed to cast the request id"); return
 			}
-
-			params := msg["params"]
-			data, marshal_err := json.marshal(params, {}, context.temp_allocator) // lol
-			if marshal_err != nil {
-				log.errorf("Failed to retrieve parameters of method `%s`", method)
-				return
+			params: any
+			if unmarshal, has_unmarshal := unmarshal_map[request_info.params]; has_unmarshal {
+				json_params := msg["params"]
+				params = unmarshal(json_params)
 			}
-			params_ptr, alloc_err := mem.alloc(size_of(request_info.params), align_of(request_info.params), context.temp_allocator)
-			if alloc_err != nil {
-				log.errorf("Failed to allocate parameters for method `%s`. Error: %v", method, alloc_err)
-			}
-			params_any := mem.make_any(params_ptr, request_info.params)
-			json.unmarshal_any(data, params_any, json.DEFAULT_SPECIFICATION, context.temp_allocator) // lol
-			request_info.callback(id, params_ptr, writer)
+			request_info.callback(id, params, writer)
 		}
 	}
 }

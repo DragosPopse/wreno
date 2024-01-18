@@ -54,7 +54,7 @@ Cancel_Params :: struct {
 }
 
 Progress_Token :: union {
-	int,
+	i64,
 	string,
 }
 

@@ -20,7 +20,7 @@ running := false // Note(Dragos): Move this somewhere else probably. A Server st
 logger: lsp.Logger
 
 callback_initialize :: proc(id: lsp.Request_Id, params: any, writer: io.Writer) {
-	params, params_ok := params.(lsp.Initialize_Params)
+	params, params_ok := params.(^lsp.Initialize_Params)
 	response: lsp.Response_Message
 	response.jsonrpc = "2.0.0"
 	response.id = id
@@ -34,11 +34,14 @@ callback_initialize :: proc(id: lsp.Request_Id, params: any, writer: io.Writer) 
 		},
 	}
 	lsp.send(response, writer)
-	log.infof("Initialized the language server")
+	client_info := params.client_info.? or_else {}
+	client_name := client_info.name
+	client_version := client_info.version.? or_else "<undefined>"
+	client_root_path := params.root_path.? or_else ""
+	log.infof("Initialized the language server for '%v'@%v at workspace path '%v'\n", client_name, client_version, client_root_path)
 }
 
 main :: proc() {
-	// fmt.printf("Starting Odin Language Server\n") // For history. This has caused a weeklong connection crash because i forgot that stdio is reserved. OK
 	// Note(Dragos): Temporary reader/writer/logger initialization. We need to figure out how to make this properly threaded
 	reader, reader_ok := io.to_reader(os.stream_from_handle(os.stdin))
 	writer, writer_ok := io.to_writer(os.stream_from_handle(os.stdout))
@@ -72,35 +75,7 @@ main :: proc() {
 			request_index := 0
 			for ; request_index < len(temp_requests); request_index += 1 {
 				request := temp_requests[request_index]
-				/*
-				root := request.value.(json.Object)
-				method := root["method"].(json.String)
-				if method == "initialize" {
-					client_params := root["params"].(json.Object)
-					client_info := client_params["clientInfo"].(json.Object)
-					client_name := client_info["name"].(json.String)
-					client_version := client_info["version"].(json.String)
-					client_root_path := client_params["rootPath"].(json.String) // note(dragos): this can be null if the file is open without a folder?
-					client_root_uri := client_params["rootUri"].(json.String)
-					// Todo(Dragos): lsp.Client_Capabilities
-					
-					response: lsp.Response_Message
-					response.jsonrpc = "2.0.0"
-					response.id = root["id"].(json.Integer)
-					response.result = lsp.Initialize_Result {
-						capabilities = {
-							semanticTokensProvider = {
-								full = true,
-								range = false, // Note(Dragos): I believe this requires some sort of incremental parsing
-								legend = {}, // Note(Dragos): This needs to be filled in
-							},
-						},
-					}
-					lsp.send(response, writer)
-					
-					log.infof("Initialized the language server for '%v'@%v at workspace path '%v'\n", client_name, client_version, client_root_path)
-				}
-				*/
+
 				root := request.value.(json.Object)
 				lsp.handle_json_message(root, writer)
 				json.destroy_value(request.value) // Note(Dragos): Figure out a better allocation method.

@@ -32,21 +32,16 @@ unmarshal_Initialize_Params :: proc(value: json.Value) -> any {
 		case:        params.work_done_token = nil
 		}
 	}
-	if process_id, has_process_id := obj["processId"]; has_process_id {
-		if has_process_id do params.process_id = process_id.(i64)
-	}
-	
-	if client_info, has_client_info := obj["clientInfo"]; has_client_info {
-		if client_info, is_obj := client_info.(json.Object); is_obj {
-			params_client_info: type_of(params.client_info.?)
-			if name, has_name := client_info["name"]; has_name do if name, is_str := name.(string); is_str {
-				params_client_info.name = name
-			}
-			if version, has_version := client_info["version"]; has_version do if version, is_str := version.(string); is_str {
-				params_client_info.version = version
-			}
-			params.client_info = params_client_info
+	params.process_id = json_get_maybe(obj, "processId", i64)
+	if client_info, has_field := json_get(obj, "clientInfo", json.Object); has_field {	
+		params_client_info: type_of(params.client_info.?)
+		if name, has_name := json_get(client_info, "name", string); has_name {
+			params_client_info.name = name
 		}
+		if version, has_version := client_info["version"]; has_version do if version, is_str := version.(string); is_str {
+			params_client_info.version = version
+		}
+		params.client_info = params_client_info
 	}
 	
 	if locale, has_locale := obj["locale"]; has_locale do if locale, is_str := locale.(string); is_str {

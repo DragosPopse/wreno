@@ -1,6 +1,7 @@
 package lsp
 
 import "core:encoding/json"
+import "base:intrinsics"
 
 Workspace_Folder :: struct {
 	/**
@@ -15,11 +16,11 @@ Workspace_Folder :: struct {
 	name: string,
 }
 
-Request_Message :: struct {
+Request_Message :: struct($Params: typeid) where intrinsics.type_is_variant_of(Request_Params, Params) {
 	jsonrpc: string,
 	id     : Request_Id,
 	method : string,
-	params : Request_Params,
+	params : Params,
 }
 
 Work_Done_Progress_Create_Params :: struct {
@@ -493,3 +494,10 @@ Request_Params :: union {
 	Work_Done_Progress_Create_Params,
 	Work_Done_Progress_Cancel_Params,
 }
+
+// This is to be used for partial unmarshaling
+Partial_Message :: struct {
+	jsonrpc: string,
+	id     : int,
+	method : string,
+} 

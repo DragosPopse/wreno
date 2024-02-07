@@ -9,7 +9,7 @@ import "core:encoding/json"
 @test
 test_unmarshal :: proc(T: ^tests.T) {
     initialize_msg := #load("test_messages/initialize.json", []byte)
-    request: Request_Message
+    request: Request_Message(Initialize_Params)
     err := json.unmarshal(initialize_msg, &request)
     tests.expectf(T, err == nil, "Failed to unmarshal: %v", err)
     fmt.printf("%#v\n", request)

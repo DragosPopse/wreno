@@ -6,7 +6,7 @@ Workspace_Edit_Client_Capabilities :: struct {
 	/**
 	 * The client supports versioned document changes in `Workspace_Edit`s
 	 */
-	document_changes: Maybe(bool) `json:"documentChanges"`,
+	document_changes: bool `json:"documentChanges"`,
 
 	/**
 	 * The resource operations the client supports. Clients should at least
@@ -14,7 +14,7 @@ Workspace_Edit_Client_Capabilities :: struct {
 	 *
 	 * @since 3.13.0
 	 */
-	resource_operations: Maybe([]string) `json:"resourceOperations""`, // Todo(Dragos): Turn this into an enum on parse
+	resource_operations: []string `json:"resourceOperations""`, // Todo(Dragos): Turn this into an enum on parse
 	
 	/**
 	 * The failure handling strategy of a client if applying the workspace edit
@@ -32,7 +32,7 @@ Workspace_Edit_Client_Capabilities :: struct {
 	 *
 	 * @since 3.16.0
 	 */
-	normalizes_line_endings: Maybe(bool) `json:"normalizesLineEndings"`,
+	normalizes_line_endings: bool `json:"normalizesLineEndings"`,
 	
 	/**
 	 * Whether the client in general supports change annotations on text edits,
@@ -46,7 +46,7 @@ Workspace_Edit_Client_Capabilities :: struct {
 		 * for instance all edits labelled with "Changes in Strings" would
 		 * be a tree node.
 		 */
-		groups_on_label: Maybe(bool) `json"groupsOnLabel"`,
+		groups_on_label: bool `json"groupsOnLabel"`,
 	}) `json:"changeAnnotationSupport"`
 }
 
@@ -54,7 +54,7 @@ Did_Change_Configuration_Client_Capabilities :: struct {
 	/**
 	 * Did change configuration notification supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Did_Change_Watched_Files_Client_Capabilities :: struct {
@@ -63,7 +63,7 @@ Did_Change_Watched_Files_Client_Capabilities :: struct {
 	 * Please note that the current protocol doesn't support static
 	 * configuration for file changes from the server side.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 	
 	 /**
 	 * Whether the client has support for relative patterns
@@ -71,14 +71,14 @@ Did_Change_Watched_Files_Client_Capabilities :: struct {
 	 *
 	 * @since 3.17.0
 	 */
-	relative_pattern_support: Maybe(bool) `json:"relativePatternSupport"`,
+	relative_pattern_support: bool `json:"relativePatternSupport"`,
 }
 
 Workspace_Symbol_Client_Capabilities :: struct {
 	/**
 	 * Symbol request supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * Specific capabilities for the `Symbol_Kind` in the `workspace/symbol`
@@ -95,7 +95,7 @@ Workspace_Symbol_Client_Capabilities :: struct {
 		 * the symbol kinds from `File` to `Array` as defined in
 		 * the initial version of the protocol.
 		 */
-		value_set: Maybe([]Symbol_Kind) `json"valueSet"`,
+		value_set: []Symbol_Kind `json"valueSet"`,
 	}) `json:"symbolKind"`,
 
 	/**
@@ -131,7 +131,7 @@ Execute_Command_Client_Capabilities :: struct {
 	/**
 	 * Execute command supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Semantic_Tokens_Workspace_Client_Capabilities :: struct {
@@ -144,7 +144,7 @@ Semantic_Tokens_Workspace_Client_Capabilities :: struct {
 	 * and is useful for situation where a server for example detect a project
 	 * wide change that requires such a calculation.
 	 */
-	refresh_support: Maybe(bool) `json:"refreshSupport"`,
+	refresh_support: bool `json:"refreshSupport"`,
 }
 
 Code_Lens_Workspace_Client_Capabilities :: struct {
@@ -157,7 +157,7 @@ Code_Lens_Workspace_Client_Capabilities :: struct {
 	 * useful for situation where a server for example detect a project wide
 	 * change that requires such a calculation.
 	 */
-	refresh_support: Maybe(bool) `json:"refreshSupport"`,
+	refresh_support: bool `json:"refreshSupport"`,
 }
 
 /**
@@ -175,7 +175,7 @@ Inline_Value_Workspace_Client_Capabilities :: struct {
 	 * is useful for situation where a server for example detect a project wide
 	 * change that requires such a calculation.
 	 */
-	refresh_support: Maybe(bool) `json:"refreshSupport"`,
+	refresh_support: bool `json:"refreshSupport"`,
 }
 
 Inlay_Hint_Workspace_Client_Capabilities :: struct {
@@ -188,7 +188,7 @@ Inlay_Hint_Workspace_Client_Capabilities :: struct {
 	 * is useful for situation where a server for example detects a project wide
 	 * change that requires such a calculation.
 	 */
-	refresh_support: Maybe(bool) `json:"refreshSupport"`,
+	refresh_support: bool `json:"refreshSupport"`,
 }
 
 /**
@@ -206,38 +206,38 @@ Diagnostic_Workspace_Client_Capabilities :: struct {
 	 * and is useful for situation where a server for example detects a project
 	 * wide change that requires such a calculation.
 	 */
-	refresh_support: Maybe(bool) `json:"refreshSupport"`,
+	refresh_support: bool `json:"refreshSupport"`,
 }
 
 Text_Document_Sync_Client_Capabilities :: struct {
 	/**
 	 * Whether text document synchronization supports dynamic registration.
 	 */
-	 dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	 dynamic_registration: bool `json:"dynamicRegistration"`,
 	 
 	/**
 	 * The client supports sending will save notifications.
 	 */
-	 will_save: Maybe(bool) `json:"willSave"`,
+	 will_save: bool `json:"willSave"`,
 
 	/**
 	 * The client supports sending a will save request and
 	 * waits for a response providing text edits which will
 	 * be applied to the document before it is saved.
 	 */
-	will_save_wait_until: Maybe(bool) `json:"willSaveWaitUntil"`,
+	will_save_wait_until: bool `json:"willSaveWaitUntil"`,
 
 	/**
 	 * The client supports did save notifications.
 	 */
-	did_save: Maybe(bool) `json:"didSave"`,
+	did_save: bool `json:"didSave"`,
 }
 
 Completion_Client_Capabilities :: struct {
 	/**
 	 * Whether completion supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 	
 	/**
 	 * The client supports the following `CompletionItem` specific
@@ -252,28 +252,28 @@ Completion_Client_Capabilities :: struct {
 		 * the end of the snippet. Placeholders with equal identifiers are
 		 * linked, that is typing in one will update others too.
 		 */
-		snippet_support: Maybe(bool) `json:"snippetSupport"`,
+		snippet_support: bool `json:"snippetSupport"`,
 
 		/**
 		 * Client supports commit characters on a completion item.
 		 */
-		commit_characters_support: Maybe(bool) `json:"commitCharactersSupport"`,
+		commit_characters_support: bool `json:"commitCharactersSupport"`,
 
 		/**
 		 * Client supports the follow content formats for the documentation
 		 * property. The order describes the preferred format of the client.
 		 */
-		documentation_format: Maybe([]string) `json:"documentationFormat"`,
+		documentation_format: []string `json:"documentationFormat"`,
 
 		/**
 		 * Client supports the deprecated property on a completion item.
 		 */
-		deprecated_support: Maybe(bool) `json:"deprecatedSupport"`,
+		deprecated_support: bool `json:"deprecatedSupport"`,
 
 		/**
 		 * Client supports the preselect property on a completion item.
 		 */
-		preselect_support: Maybe(bool) `json:"preselectSupport"`,
+		preselect_support: bool `json:"preselectSupport"`,
 
 		/**
 		 * Client supports the tag property on a completion item. Clients
@@ -284,7 +284,7 @@ Completion_Client_Capabilities :: struct {
 		 * @since 3.15.0
 		 */
 		tag_support: Maybe(struct {
-			value_set: Completion_Item_Tag `json:"valueSet"`,
+			value_set: []Completion_Item_Tag `json:"valueSet"`,
 		}) `json:"tagSupport"`,
 
 		/**
@@ -293,7 +293,7 @@ Completion_Client_Capabilities :: struct {
 		 *
 		 * @since 3.16.0
 		 */
-		insert_replace_support: Maybe(bool) `json:"insertReplaceSupport"`,
+		insert_replace_support: bool `json:"insertReplaceSupport"`,
 
 		/**
 		 * Indicates which properties a client can resolve lazily on a
@@ -326,7 +326,7 @@ Completion_Client_Capabilities :: struct {
 		 *
 		 * @since 3.17.0
 		 */
-		label_details_support: Maybe(bool) `json:"labelDetailsSupport"`,
+		label_details_support: bool `json:"labelDetailsSupport"`,
 	}) `json:"completionItem"`,
 	
 	completion_item_kind: Maybe(struct {
@@ -340,14 +340,14 @@ Completion_Client_Capabilities :: struct {
 		 * the completion items kinds from `Text` to `Reference` as defined in
 		 * the initial version of the protocol.
 		 */
-		value_set: Maybe([]Completion_Item_Kind) `json:"valueSet"`,
+		value_set: []Completion_Item_Kind `json:"valueSet"`,
 	}) `json:"completionItemKind"`,
 
 	/**
 	 * The client supports to send additional context information for a
 	 * `textDocument/completion` request.
 	 */
-	context_support: Maybe(bool) `json:"contextSupport"`,
+	context_support: bool `json:"contextSupport"`,
 
 	/**
 	 * The client's default when the completion item doesn't provide a
@@ -374,7 +374,7 @@ Completion_Client_Capabilities :: struct {
 		 *
 		 * @since 3.17.0
 		 */
-		item_defaults: Maybe([]string) `json:"itemDefaults"`,
+		item_defaults: []string `json:"itemDefaults"`,
 	 }) `json:"completionList"`,
 }
 
@@ -382,21 +382,21 @@ Hover_Client_Capabilities :: struct {
 	/**
 	 * Whether hover supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * Client supports the follow content formats if the content
 	 * property refers to a `literal of type MarkupContent`.
 	 * The order describes the preferred format of the client.
 	 */
-	content_format: Maybe([]string) `json:"contentFormat"`,
+	content_format: []string `json:"contentFormat"`,
 }
 
 Signature_Help_Client_Capabilities :: struct {
 	/**
 	 * Whether signature help supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * The client supports the following `Signature_Information`
@@ -407,7 +407,7 @@ Signature_Help_Client_Capabilities :: struct {
 		 * Client supports the follow content formats for the documentation
 		 * property. The order describes the preferred format of the client.
 		 */
-		documentation_format: Maybe([]string) `json:"documentationFormat"`,
+		documentation_format: []string `json:"documentationFormat"`,
 
 		/**
 		 * Client capabilities specific to parameter information.
@@ -419,7 +419,7 @@ Signature_Help_Client_Capabilities :: struct {
 			 *
 			 * @since 3.14.0
 			 */
-			label_offset_support: Maybe(bool) `json:"labelOffsetSupport"`,
+			label_offset_support: bool `json:"labelOffsetSupport"`,
 		}) `json:"parameterInformation"`,
 
 		/**
@@ -428,7 +428,7 @@ Signature_Help_Client_Capabilities :: struct {
 		 *
 		 * @since 3.16.0
 		 */
-		active_parameter_support: Maybe(bool) `json:"activeParameterSupport"`,
+		active_parameter_support: bool `json:"activeParameterSupport"`,
 	}) `json:"signatureInformation"`,
 
 	/**
@@ -439,7 +439,7 @@ Signature_Help_Client_Capabilities :: struct {
 	 *
 	 * @since 3.15.0
 	 */
-	context_support: Maybe(bool) `json:"contextSupport"`,
+	context_support: bool `json:"contextSupport"`,
 }
 
 Declaration_Client_Capabilities :: struct {
@@ -448,12 +448,12 @@ Declaration_Client_Capabilities :: struct {
 	 * `true` the client supports the new `Declaration_Registration_Options`
 	 * return value for the corresponding server capability as well.
 	 */
-	 dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	 dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	 /**
 	 * The client supports additional metadata in the form of declaration links.
 	 */
-	 link_support: Maybe(bool) `json:"linkSupport"`,
+	 link_support: bool `json:"linkSupport"`,
  
 }
 
@@ -461,14 +461,14 @@ Definition_Client_Capabilities :: struct {
 	/**
 	 * Whether definition supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * The client supports additional metadata in the form of definition links.
 	 *
 	 * @since 3.14.0
 	 */
-	link_support: Maybe(bool) `json:"linkSupport"`,
+	link_support: bool `json:"linkSupport"`,
 }
 
 Type_Definition_Client_Capabilities :: struct {
@@ -477,14 +477,14 @@ Type_Definition_Client_Capabilities :: struct {
 	 * `true` the client supports the new `TypeDefinitionRegistrationOptions`
 	 * return value for the corresponding server capability as well.
 	 */
-	 dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	 dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	 /**
 	 * The client supports additional metadata in the form of definition links.
 	 *
 	 * @since 3.14.0
 	 */
-	 link_support: Maybe(bool) `json:"linkSupport"`,
+	 link_support: bool `json:"linkSupport"`,
 }
 
 Implementation_Client_Capabilities :: struct {
@@ -493,48 +493,48 @@ Implementation_Client_Capabilities :: struct {
 	 * `true` the client supports the new `ImplementationRegistrationOptions`
 	 * return value for the corresponding server capability as well.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * The client supports additional metadata in the form of definition links.
 	 *
 	 * @since 3.14.0
 	 */
-	 link_support: Maybe(bool) `json:"linkSupport"`,
+	 link_support: bool `json:"linkSupport"`,
 }
 
 Reference_Client_Capabilities :: struct {
 	/**
 	 * Whether references supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Document_Highlight_Client_Capabilities :: struct {
 	/**
 	 * Whether document highlight supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Document_Symbol_Client_Capabilities :: struct {
 	/**
 	 * Whether document symbol supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * Specific capabilities for the `SymbolKind` in the
 	 * `textDocument/documentSymbol` request.
 	 */
 	symbol_kind: Maybe(struct {
-		value_set: Maybe([]Symbol_Kind) `json:"valueSet"`,
+		value_set: []Symbol_Kind `json:"valueSet"`,
 	}) `json:"symbolKind"`,
 
 	/**
 	 * The client supports hierarchical document symbols.
 	 */
-	hierarchical_document_symbol_support: Maybe(bool) `json:"hierarchicalDocumentSymbolSupport"`,
+	hierarchical_document_symbol_support: bool `json:"hierarchicalDocumentSymbolSupport"`,
 
 	/**
 	 * The client supports tags on `SymbolInformation`. Tags are supported on
@@ -553,14 +553,14 @@ Document_Symbol_Client_Capabilities :: struct {
 	 *
 	 * @since 3.16.0
 	 */
-	label_support: Maybe(bool) `json:"labelSupport"`,
+	label_support: bool `json:"labelSupport"`,
 }
 
 Code_Action_Client_Capabilities :: struct {
 	/**
 	 * Whether code action supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * The client supports code action literals as a valid
@@ -589,14 +589,14 @@ Code_Action_Client_Capabilities :: struct {
 	 *
 	 * @since 3.15.0
 	 */
-	is_preferred_support: Maybe(bool) `json:"isPreferredSupport"`,
+	is_preferred_support: bool `json:"isPreferredSupport"`,
 
 	/**
 	 * Whether code action supports the `disabled` property.
 	 *
 	 * @since 3.16.0
 	 */
-	disabled_support: Maybe(bool) `json:"disabledSupport"`,
+	disabled_support: bool `json:"disabledSupport"`,
 
 	/**
 	 * Whether code action supports the `data` property which is
@@ -605,7 +605,7 @@ Code_Action_Client_Capabilities :: struct {
 	 *
 	 * @since 3.16.0
 	 */
-	data_support: Maybe(bool) `json:"dataSupport"`,
+	data_support: bool `json:"dataSupport"`,
 
 	/**
 	 * Whether the client supports resolving additional code action
@@ -629,28 +629,28 @@ Code_Action_Client_Capabilities :: struct {
 	 *
 	 * @since 3.16.0
 	 */
-	honors_change_annotations: Maybe(bool) `json:"honorsChangeAnnotations"`,
+	honors_change_annotations: bool `json:"honorsChangeAnnotations"`,
 }
 
 Document_Color_Client_Capabilities :: struct {
 	/**
 	 * Whether document color supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Document_Formatting_Client_Capabilities :: struct {
 	/**
 	 * Whether formatting supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Document_Range_Formatting_Client_Capabilities :: struct {
 	/**
 	 * Whether formatting supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Document_On_Type_Formatting_Client_Capabilities :: struct {
@@ -662,14 +662,14 @@ Document_On_Type_Formatting_Client_Capabilities :: struct {
 	/**
 	 * More trigger characters.
 	 */
-	more_trigger_character: Maybe([]string) `json:"moreTriggerCharacter"`,
+	more_trigger_character: []string `json:"moreTriggerCharacter"`,
 }
 
 Rename_Client_Capabilities :: struct {
 	/**
 	 * Whether rename supports dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * Client supports testing for validity of rename operations
@@ -677,7 +677,7 @@ Rename_Client_Capabilities :: struct {
 	 *
 	 * @since version 3.12.0
 	 */
-	prepare_support: Maybe(bool) `json:"prepareSupport"`,
+	prepare_support: bool `json:"prepareSupport"`,
 
 	/**
 	 * Client supports the default behavior result
@@ -699,14 +699,14 @@ Rename_Client_Capabilities :: struct {
 	 *
 	 * @since 3.16.0
 	 */
-	honors_change_annotations: Maybe(bool) `json:"honorsChangeAnnotations"`,
+	honors_change_annotations: bool `json:"honorsChangeAnnotations"`,
 }
 
 Publish_Diagnostics_Client_Capabilities :: struct {
 	/**
 	 * Whether the clients accepts diagnostics with related information.
 	 */
-	related_information: Maybe(bool) `json:"relatedInformation"`,
+	related_information: bool `json:"relatedInformation"`,
 
 	/**
 	 * Client supports the tag property to provide meta data about a diagnostic.
@@ -727,14 +727,14 @@ Publish_Diagnostics_Client_Capabilities :: struct {
 	 *
 	 * @since 3.15.0
 	 */
-	version_support: Maybe(bool) `json:"versionSupport"`,
+	version_support: bool `json:"versionSupport"`,
 
 	/**
 	 * Client supports a codeDescription property
 	 *
 	 * @since 3.16.0
 	 */
-	code_description_support: Maybe(bool) `json:"codeDescriptionSupport"`,
+	code_description_support: bool `json:"codeDescriptionSupport"`,
 
 	/**
 	 * Whether code action supports the `data` property which is
@@ -743,7 +743,7 @@ Publish_Diagnostics_Client_Capabilities :: struct {
 	 *
 	 * @since 3.16.0
 	 */
-	data_support: Maybe(bool) `json:"dataSupport"`,
+	data_support: bool `json:"dataSupport"`,
 }
 
 Folding_Range_Client_Capabilities :: struct {
@@ -753,7 +753,7 @@ Folding_Range_Client_Capabilities :: struct {
 	 * `FoldingRangeRegistrationOptions` return value for the corresponding
 	 * server capability as well.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * The maximum number of folding ranges that the client prefers to receive
@@ -767,7 +767,7 @@ Folding_Range_Client_Capabilities :: struct {
 	 * If set, client will ignore specified `startCharacter` and `endCharacter`
 	 * properties in a FoldingRange.
 	 */
-	line_folding_only: Maybe(bool) `json:"lineFoldingOnly"`,
+	line_folding_only: bool `json:"lineFoldingOnly"`,
 
 	/**
 	 * Specific options for the folding range kind.
@@ -781,7 +781,7 @@ Folding_Range_Client_Capabilities :: struct {
 		 * handle values outside its set gracefully and falls back
 		 * to a default value when unknown.
 		 */
-		value_set: Maybe([]string) `json:"valueSet"`,
+		value_set: []string `json:"valueSet"`,
 	}) `json:"foldingRangeKind"`,
 
 	/**
@@ -795,7 +795,7 @@ Folding_Range_Client_Capabilities :: struct {
 		 *
 		 * @since 3.17.0
 		 */
-		collapsed_text: Maybe(bool) `json:"collapsedText"`,
+		collapsed_text: bool `json:"collapsedText"`,
 	}) `json:"foldingRange"`,
 }
 
@@ -806,7 +806,7 @@ Selection_Range_Client_Capabilities :: struct {
 	 * `SelectionRangeRegistrationOptions` return value for the corresponding
 	 * server capability as well.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Linked_Editing_Range_Client_Capabilities :: struct {
@@ -816,7 +816,7 @@ Linked_Editing_Range_Client_Capabilities :: struct {
 	 * `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
 	 * return value for the corresponding server capability as well.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Call_Hierarchy_Client_Capabilities :: struct {
@@ -826,7 +826,7 @@ Call_Hierarchy_Client_Capabilities :: struct {
 	 * Static_Registration_Options)` return value for the corresponding server
 	 * capability as well.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Semantic_Tokens_Client_Capabilities :: struct {
@@ -836,7 +836,7 @@ Semantic_Tokens_Client_Capabilities :: struct {
 	 * Static_Registration_Options)` return value for the corresponding server
 	 * capability as well.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * Which requests the client supports and might send to the server
@@ -853,19 +853,19 @@ Semantic_Tokens_Client_Capabilities :: struct {
 		 * The client will send the `textDocument/semanticTokens/range` request
 		 * if the server provides a corresponding handler.
 		 */
-		range: Maybe(union {bool, struct{}}), // Note(Dragos): What the fuck is this.
+		range: union {bool, struct{}}, // Note(Dragos): What the fuck is this.
 
 		/**
 		 * The client will send the `textDocument/semanticTokens/full` request
 		 * if the server provides a corresponding handler.
 		 */
-		full: Maybe(union {bool, struct { // Note(Dragos): psychotic
+		full: union {bool, struct { // Note(Dragos): psychotic
 			/**
 			 * The client will send the `textDocument/semanticTokens/full/delta`
 			 * request if the server provides a corresponding handler.
 			 */
-			delta: Maybe(bool),
-		}}),
+			delta: bool,
+		}},
 	},
 
 	/**
@@ -886,12 +886,12 @@ Semantic_Tokens_Client_Capabilities :: struct {
 	/**
 	 * Whether the client supports tokens that can overlap each other.
 	 */
-	overlapping_token_support: Maybe(bool) `json:"overlappingTokenSupport"`,
+	overlapping_token_support: bool `json:"overlappingTokenSupport"`,
 
 	/**
 	 * Whether the client supports tokens that can span multiple lines.
 	 */
-	multiline_token_support: Maybe(bool) `json:"multilineTokenSupport"`,
+	multiline_token_support: bool `json:"multilineTokenSupport"`,
 
 	/**
 	 * Whether the client allows the server to actively cancel a
@@ -901,7 +901,7 @@ Semantic_Tokens_Client_Capabilities :: struct {
 	 *
 	 * @since 3.17.0
 	 */
-	server_cancel_support: Maybe(bool) `json:"serverCancelSupport"`,
+	server_cancel_support: bool `json:"serverCancelSupport"`,
 
 	/**
 	 * Whether the client uses semantic tokens to augment existing
@@ -915,7 +915,7 @@ Semantic_Tokens_Client_Capabilities :: struct {
 	 *
 	 * @since 3.17.0
 	 */
-	augments_syntax_tokens: Maybe(bool) `json:"augmentsSyntaxTokens"`,
+	augments_syntax_tokens: bool `json:"augmentsSyntaxTokens"`,
 }
 
 Moniker_Client_Capabilities :: struct {
@@ -925,7 +925,7 @@ Moniker_Client_Capabilities :: struct {
 	 * StaticRegistrationOptions)` return value for the corresponding server
 	 * capability as well.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Type_Hierarchy_Client_Capabilities :: struct {
@@ -935,7 +935,7 @@ Type_Hierarchy_Client_Capabilities :: struct {
 	 * StaticRegistrationOptions)` return value for the corresponding server
 	 * capability as well.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`
+	dynamic_registration: bool `json:"dynamicRegistration"`
 }
 
 Inline_Value_Client_Capabilities :: struct {
@@ -943,14 +943,14 @@ Inline_Value_Client_Capabilities :: struct {
 	 * Whether implementation supports dynamic registration for inline
 	 * value providers.
 	 */
-	 dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	 dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
 Inlay_Hint_Client_Capabilities :: struct {
 	/**
 	 * Whether inlay hints support dynamic registration.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * Indicates which properties a client can resolve lazily on an inlay
@@ -971,13 +971,13 @@ Diagnostic_Client_Capabilities :: struct {
 	 * `(Text_Document_Registration_Options & Static_Registration_Options)`
 	 * return value for the corresponding server capability as well.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * Whether the clients supports related documents for document diagnostic
 	 * pulls.
 	 */
-	related_document_support: Maybe(bool) `json:"relatedDocumentSupport"`,
+	related_document_support: bool `json:"relatedDocumentSupport"`,
 }
 
 /**
@@ -1164,12 +1164,12 @@ Notebook_Document_Sync_Client_Capabilities :: struct {
 	 * `(NotebookDocumentSyncRegistrationOptions & NotebookDocumentSyncOptions)`
 	 * return value for the corresponding server capability as well.
 	 */
-	dynamic_registration: Maybe(bool) `json:"dynamicRegistration"`,
+	dynamic_registration: bool `json:"dynamicRegistration"`,
 
 	/**
 	 * The client supports sending execution summary data per cell.
 	 */
-	execution_summary_support: Maybe(bool) `json:"executionSummarySupport"`,
+	execution_summary_support: bool `json:"executionSummarySupport"`,
 }
 
 /**
@@ -1199,7 +1199,7 @@ Show_Message_Request_Client_Capabilities :: struct {
 		 * are preserved and sent back to the server in the
 		 * request's response.
 		 */
-		additional_properties_support: Maybe(bool) `json:"additionalPropertiesSupport"`,
+		additional_properties_support: bool `json:"additionalPropertiesSupport"`,
 	}) `json:"messageActionItem"`,
 }
 
@@ -1253,7 +1253,7 @@ Markdown_Client_Capabilities :: struct {
 	 *
 	 * @since 3.17.0
 	 */
-	allowed_tags: Maybe([]string) `json:"allowedTags"`,
+	allowed_tags: []string `json:"allowedTags"`,
 }
 
 Client_Capabilities :: struct {

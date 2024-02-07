@@ -76,6 +76,7 @@ handle_json_message :: proc(msg: json.Object, writer: io.Writer) {
 				params = unmarshal(json_params)
 			}
 			request_info.callback(id, params, writer)
+			
 		}
 	}
 

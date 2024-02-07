@@ -498,6 +498,6 @@ Request_Params :: union {
 // This is to be used for partial unmarshaling
 Partial_Message :: struct {
 	jsonrpc: string,
-	id     : int,
+	id     : Request_Id,
 	method : string,
 } 

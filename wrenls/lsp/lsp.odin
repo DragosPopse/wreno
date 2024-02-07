@@ -522,7 +522,7 @@ send :: proc(msg: any, writer: io.Writer) -> bool {
 }
 
 
-parse_header :: proc(reader: io.Reader) -> (header: Header, ok: bool) {	
+read_header :: proc(reader: io.Reader) -> (header: Header, ok: bool) {	
 	sb := strings.builder_make(context.temp_allocator)
 	found_content_length := false
 	sb_writer := strings.to_writer(&sb)
@@ -580,7 +580,7 @@ parse_header :: proc(reader: io.Reader) -> (header: Header, ok: bool) {
 	return header, found_content_length
 }
 
-parse_body :: proc(reader: io.Reader, header: Header, allocator := context.allocator) -> (json.Object, bool) {
+read_body :: proc(reader: io.Reader, header: Header, allocator := context.allocator) -> (json.Object, bool) {
 	data := make([]u8, header.content_length, context.temp_allocator)
 	if _, err := io.read(reader, data); err != nil {
 		log.error("Failed to read body")
@@ -596,19 +596,92 @@ parse_body :: proc(reader: io.Reader, header: Header, allocator := context.alloc
 
 
 
-Channels :: struct {
+server_init_stdio :: proc(s: ^Server) {
+	s.read  = os.stream_from_handle(os.stdin)
+	s.write = os.stream_from_handle(os.stdout)
+	s.err   = os.stream_from_handle(os.stderr)
+}
+
+Server :: struct {
 	read : io.Reader,
 	write: io.Writer,
 	err  : io.Writer,
+
+	callbacks: struct {
+		on_initialize : proc(id: Request_Id, params: Initialize_Params) -> (result: Initialize_Result, error: Maybe(Response_Error)),
+		on_initialized: proc(params: Initialized_Params)
+	}
 }
 
-channels_init_stdio :: proc(channel: ^Channels, err_to_stdout: bool = false) {
-	channel.read  = os.stream_from_handle(os.stdin)
-	channel.write = os.stream_from_handle(os.stdout)
-	channel.err   = os.stream_from_handle(os.stderr) if !err_to_stdout else channel.write
+
+poll_message :: proc(s: ^Server) -> bool {
+	header, header_ok := read_header(s.read)
+	content_data := make([]u8, header.content_length, context.temp_allocator)
+	if _, err := io.read(s.read, content_data); err != nil {
+		log.error("Failed to read the message body")
+		return false
+	}
+
+	pm: Partial_Message
+	pm_parse_err := json.unmarshal(content_data, &pm, allocator = context.temp_allocator)
+	if pm_parse_err != nil {
+		log.errorf("Failed to partially parse the message: %v", pm_parse_err)
+		return false
+	}
+
+	method := pm.method
+	id := pm.id
+	callbacks := &s.callbacks
+
+	switch method {
+	case "initialize":
+		msg: Request_Message(Initialize_Params)
+		msg_parse_err := json.unmarshal(content_data, &msg, allocator = context.temp_allocator)
+		if msg_parse_err != nil {
+			log.errorf("Failed to parse parameters for message %s. Error %v", method, msg_parse_err)
+			return false
+		}
+		on_initialize := callbacks.on_initialize
+		if on_initialize != nil {
+			result, err := on_initialize(id, msg.params)
+			response: Response_Message
+			response.jsonrpc = "2.0.0"
+			response.id = id
+			response.result = result
+			send(response, s.write)
+		}
+	}
+
+
+	return true
 }
 
+log_json_message :: proc(msg: json.Object) {
+	opts: json.Marshal_Options
+	opts.pretty = true
+	data, err := json.marshal(msg, opts, context.temp_allocator)
+	if err == nil {
+		log.infof("Received message: %v", transmute(string)data)
+	} else {
+		log.warnf("Failed to log a received message: %v", err)
+	}
+}
 
-Server :: struct {
-	channels: Channels,
+handle_json_message :: proc(msg: json.Object, writer: io.Writer) {
+	method := msg["method"].(string)
+	msg_id, has_id := msg["id"]
+	id: Request_Id
+	if has_id do #partial switch v in msg_id {
+	case string: id = v
+	case i64: id = v
+	case: log.error("Failed to cast the request id"); return
+	}
+	
+	switch method {
+	case "initialize":
+		
+	}
+
+
+	log_json_message(msg)
 }

@@ -81,7 +81,7 @@ unmarshal_Initialize_Params :: proc(value: json.Value) -> any {
 				workspace.apply_edit = v
 			}
 			if wks_edit, ok := json_get(wks, "workspaceEdit", json.Object); ok {
-				workspace.workspace_edit.document_changes = json_get_maybe(wks_edit, "documentChanges", bool)
+				workspace.workspace_edit.document_changes, _ = json_get(wks_edit, "documentChanges", bool)
 			}
 		}
 	}

@@ -17,15 +17,9 @@ import "../wren"
 
 running := false // Note(Dragos): Move this somewhere else probably. A Server struct maybe?
 
-logger: lsp.Logger
 
-callback_initialize :: proc(id: lsp.Request_Id, params: any, writer: io.Writer) {
-	params, params_ok := params.(lsp.Initialize_Params)
-	
-	response: lsp.Response_Message
-	response.jsonrpc = "2.0.0"
-	response.id = id
-	response.result = lsp.Initialize_Result {
+initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result: lsp.Initialize_Result, error: Maybe(lsp.Response_Error)) {
+	result = lsp.Initialize_Result {
 		capabilities = {
 			semanticTokensProvider = {
 				full = true,
@@ -34,122 +28,32 @@ callback_initialize :: proc(id: lsp.Request_Id, params: any, writer: io.Writer) 
 			},
 		},
 	}
-	lsp.send(response, writer)
+
 	client_info := params.client_info.? or_else {}
 	client_name := client_info.name
 	client_version := client_info.version.? or_else "<undefined>"
 	client_root_path := params.root_path.? or_else ""
 	log.infof("Initialized the language server for '%v'@%v at workspace path '%v'", client_name, client_version, client_root_path)
+	return
+}
+
+logger: lsp.Logger
+
+server := lsp.Server {
+	callbacks = {
+		on_initialize = initialize,
+	},
 }
 
 main :: proc() {
 	// Note(Dragos): Temporary reader/writer/logger initialization. We need to figure out how to make this properly threaded
-	reader, reader_ok := io.to_reader(os.stream_from_handle(os.stdin))
-	writer, writer_ok := io.to_writer(os.stream_from_handle(os.stdout))
-	lsp.logger_init(&logger, .Debug, writer, writer)
-	assert(reader_ok, "Cannot create reader")
-	assert(writer_ok, "Cannot create writer")
+	lsp.server_init_stdio(&server)
+	lsp.logger_init(&logger, .Debug, server.write, server.write)
 	running = true
-
-	lsp.register_request_callback("initialize", callback_initialize)
-
-	request_thread_data := Request_Thread_Data {
-		reader = reader,// Note(Dragos): Need to figure out storage of these
-		writer = writer,
-		logger = logger,
-	}
-
-	request_thread := thread.create_and_start_with_data(&request_thread_data, request_thread_main)
-	for running {
-		context.logger = logger
-		context.assertion_failure_proc = lsp.default_assertion_failure_proc
-		sync.sema_wait(&requests_sem)
-		// Consume requests
-
-		// Note(Dragos) from ols: why do we need this temp request things? Doesn't seem to make much sense
-		temp_requests := make([dynamic]Request, 0, context.temp_allocator)
-		sync.mutex_lock(&requests_mutex)
-			for req in requests {
-				append(&temp_requests, req)		
-			}
-
-			request_index := 0
-			for ; request_index < len(temp_requests); request_index += 1 {
-				request := temp_requests[request_index]
-
-				root := request.value.(json.Object)
-				lsp.handle_json_message(root, writer)
-				json.destroy_value(request.value) // Note(Dragos): Figure out a better allocation method.
-			}
-
-			for i := 0; i < request_index; i += 1 {
-				pop_front(&requests)
-			}
-		sync.mutex_unlock(&requests_mutex)	
-
-		if request_index != len(temp_requests) {
-			sync.sema_post(&requests_sem)
-		}
-
-		free_all(context.temp_allocator) // Note(Dragos): Is the temp allocator thread_local? I believe so
-	}
-}
-
-Request :: struct {
-	id: lsp.Request_Id,
-	value: json.Value,
-	is_notification: bool,
-}
-
-requests: [dynamic]Request
-requests_sem: sync.Sema
-requests_mutex: sync.Mutex
-
-Request_Thread_Data :: struct {
-	reader: io.Reader,
-	writer: io.Writer,
-	logger: log.Logger,
-}
-
-request_thread_main :: proc(data: rawptr) {
-	data := cast(^Request_Thread_Data)data
-	
-	for running {
-		context.logger = data.logger
-		context.assertion_failure_proc = lsp.default_assertion_failure_proc // Note(Dragos): Figure out a way to set this in a single place.
-		header, header_ok := lsp.parse_header(data.reader)
-		if !header_ok {
-			log.error("Failed to read and parse header")
-			return
-		}
-		body, body_ok := lsp.parse_body(data.reader, header)
-		if !body_ok {
-			log.error("Failed to read and parse body")
-			return // Note(Dragos): These returns seem...crashful
-		}
-
-		root := body
-
-		id: lsp.Request_Id
-		id_value, id_value_exists := root["id"]
-		if id_value_exists {
-			#partial switch v in id_value {
-			case json.String:  id = v
-			case json.Integer: id = v
-			case:              id = 0
-			}
-		}
-
-		if sync.guard(&requests_mutex) {
-			method := root["method"].(json.String)
-			if method == "$/cancelRequest" {
-				// Todo(Dragos): handle cancels
-			} else {
-				append(&requests, Request{id = id, value = root})
-				sync.sema_post(&requests_sem)
-			}
-		}
-
+	context.logger = logger
+	context.assertion_failure_proc = lsp.default_assertion_failure_proc
+	for lsp.poll_message(&server) {
+		
 		free_all(context.temp_allocator)
 	}
 }

@@ -21,6 +21,7 @@ logger: lsp.Logger
 
 callback_initialize :: proc(id: lsp.Request_Id, params: any, writer: io.Writer) {
 	params, params_ok := params.(lsp.Initialize_Params)
+	
 	response: lsp.Response_Message
 	response.jsonrpc = "2.0.0"
 	response.id = id

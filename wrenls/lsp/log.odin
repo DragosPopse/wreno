@@ -11,7 +11,7 @@ import "core:sync"
 import "core:time"
 
 Logger_Flag :: enum {
-
+	Log_To_File,
 }
 
 Logger_Flags :: bit_set[Logger_Flag]
@@ -69,6 +69,17 @@ logger_proc :: proc(
 	}
 
 	send(notif, logger.out if level < .Error else logger.err)
+	
+	{ // TODO(dragos): remove this
+		meesage := fmt.tprintf("%s\n", message)
+		@static first_message := true
+		file, _ := os.open("C:/dev/wreno/log.txt", os.O_CREATE | os.O_WRONLY | (os.O_TRUNC if first_message else os.O_APPEND))
+		first_message = false
+		os.write_string(file, message)
+		os.write_byte(file, '\n')
+		os.close(file)
+	}
+	
 }
 
 

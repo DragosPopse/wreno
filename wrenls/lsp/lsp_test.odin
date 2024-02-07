@@ -7,6 +7,15 @@ import "core:io"
 import "core:encoding/json"
 
 @test
+test_unmarshal :: proc(T: ^tests.T) {
+    initialize_msg := #load("test_messages/initialize.json", []byte)
+    request: Request_Message
+    err := json.unmarshal(initialize_msg, &request)
+    tests.expectf(T, err == nil, "Failed to unmarshal: %v", err)
+    fmt.printf("%#v\n", request)
+}
+
+@test
 test_send :: proc(T: ^tests.T) {
     writer := os.stream_from_handle(os.stdout)
     msg: Response_Message

@@ -36,9 +36,6 @@ unmarshal_Initialize_Params :: proc(value: json.Value) -> any {
 	params.process_id = json_get_maybe(obj, "processId", i64)
 	if client_info, has_field := json_get(obj, "clientInfo", json.Object); has_field {	
 		params_client_info: type_of(params.client_info.?)
-		if name, has_name := json_get(client_info, "name", string); has_name {
-			params_client_info.name = name
-		}
 		params_client_info.name = json_get(client_info, "name", string) or_else ""
 		params_client_info.version = json_get_maybe(client_info, "version", string)
 		params.client_info = params_client_info

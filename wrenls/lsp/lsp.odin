@@ -18,6 +18,7 @@ import "core:strings"
 import "core:strconv"
 import "core:fmt"
 import "core:log"
+import "core:os"
 
 Type_Hierarchy_Item :: struct {
 	// todo
@@ -591,4 +592,23 @@ parse_body :: proc(reader: io.Reader, header: Header, allocator := context.alloc
 		return nil, false
 	}
 	return value.(json.Object), true
+}
+
+
+
+Channels :: struct {
+	read : io.Reader,
+	write: io.Writer,
+	err  : io.Writer,
+}
+
+channels_init_stdio :: proc(channel: ^Channels, err_to_stdout: bool = false) {
+	channel.read  = os.stream_from_handle(os.stdin)
+	channel.write = os.stream_from_handle(os.stdout)
+	channel.err   = os.stream_from_handle(os.stderr) if !err_to_stdout else channel.write
+}
+
+
+Server :: struct {
+	channels: Channels,
 }

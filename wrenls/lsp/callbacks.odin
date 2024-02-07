@@ -11,10 +11,18 @@ import "core:mem"
 // Note(Dragos): we need to handle errors too
 Request_Callback :: #type proc(id: Request_Id, params: any, writer: io.Writer)
 
+Notification_Callback :: #type proc(params: any)
+
+
 Request_Info :: struct {
 	params: typeid,
 	result: typeid,
 	callback: Request_Callback,
+}
+
+Notification_Info :: struct {
+	params: typeid,
+	callback: Notification_Callback,
 }
 
 request_map := map[string]Request_Info {
@@ -24,10 +32,28 @@ request_map := map[string]Request_Info {
 	},
 }
 
+notification_map := map[string]Notification_Info {
+	"initialized" = {
+		
+	},
+}
+
 register_request_callback :: proc(method: string, callback: Request_Callback) -> (ok: bool) {
 	info := (&request_map[method]) or_return
 	info.callback = callback
 	return true
+}
+
+log_json_message :: proc(msg: json.Object) {
+	opts: json.Marshal_Options
+	opts.pretty = true
+	data, err := json.marshal(msg, opts, context.temp_allocator)
+	if err == nil {
+		log.infof("Received message: %v", transmute(string)data)
+	} else {
+		log.warnf("Failed to log a received message: %v", err)
+	}
+	
 }
 
 handle_json_message :: proc(msg: json.Object, writer: io.Writer) {
@@ -52,4 +78,6 @@ handle_json_message :: proc(msg: json.Object, writer: io.Writer) {
 			request_info.callback(id, params, writer)
 		}
 	}
+
+	log_json_message(msg)
 }

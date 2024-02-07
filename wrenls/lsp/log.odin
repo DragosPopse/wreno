@@ -10,12 +10,18 @@ import "core:thread"
 import "core:sync"
 import "core:time"
 
+Logger_Flag :: enum {
+
+}
+
+Logger_Flags :: bit_set[Logger_Flag]
 
 Logger :: struct {
 	#subtype core_logger: log.Logger,
 	using data: struct {
 		out: io.Writer,
 		err: io.Writer,
+		flags: Logger_Flags,
 	},
 }
 

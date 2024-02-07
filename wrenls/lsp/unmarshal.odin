@@ -22,6 +22,7 @@ json_get_maybe :: proc(obj: json.Object, field: string, $as_type: typeid) -> (Ma
 Unmarshal_Proc :: #type proc(value: json.Value) -> any
 
 // todo(dragos): unfinished
+@private
 unmarshal_Initialize_Params :: proc(value: json.Value) -> any {
 	params := new(Initialize_Params, context.temp_allocator)
 	obj := value.(json.Object) or_return
@@ -38,9 +39,8 @@ unmarshal_Initialize_Params :: proc(value: json.Value) -> any {
 		if name, has_name := json_get(client_info, "name", string); has_name {
 			params_client_info.name = name
 		}
-		if version, has_version := client_info["version"]; has_version do if version, is_str := version.(string); is_str {
-			params_client_info.version = version
-		}
+		params_client_info.name = json_get(client_info, "name", string) or_else ""
+		params_client_info.version = json_get_maybe(client_info, "version", string)
 		params.client_info = params_client_info
 	}
 	

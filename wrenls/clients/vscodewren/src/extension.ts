@@ -19,12 +19,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 	register_commands(context);
 
-	// note(Dragos): these server options are for debugging purposes. We need a way to figure out this path. Probably a config file or a user-option
+	// TODO(Dragos): these server options are for debugging purposes. We need a way to figure out this path. Probably a config file or a user-option
 	let server_options: lc.ServerOptions = {
-		command: 'c:/dev/wreno/wrenls.exe',
+		command: 'c:/dev/wreno/out/lsdeb/wrenls.exe',
 		args: [],
 		options: {
-			cwd: 'c:/dev/wreno',
+			cwd: 'c:/dev/wreno/out/lsdeb/',
 		},
 	};
 

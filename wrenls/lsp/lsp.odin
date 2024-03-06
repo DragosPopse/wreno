@@ -117,12 +117,51 @@ Diagnostic :: struct {
 
 
 Save_Options :: struct {
-	includeText: bool,
+	/**
+	 * The client is supposed to include the content on save.
+	 */
+	include_text: bool `json:"includeText"`,
+}
+
+Text_Document_Sync_Kind :: enum {
+	/**
+	 * Documents should not be synced at all.
+	 */
+	None = 0,
+
+	/**
+	 * Documents are synced by always sending the full content
+	 * of the document.
+	 */
+	Full = 1,
+
+	/**
+	 * Documents are synced by sending the full content on open.
+	 * After that only incremental updates to the document are
+	 * sent.
+	 */
+	Incremental = 2,
 }
 
 Text_Document_Sync_Options :: struct {
-	openClose: bool,
-	change   : int,
+	/**
+	 * Open and close notifications are sent to the server. If omitted open
+	 * close notifications should not be sent.
+	 */
+	open_close: bool `json:"openClose"`,
+
+	/**
+	 * Change notifications are sent to the server. See
+	 * TextDocumentSyncKind.None, TextDocumentSyncKind.Full and
+	 * TextDocumentSyncKind.Incremental. If omitted it defaults to
+	 * TextDocumentSyncKind.None.
+	 */
+	change   : Text_Document_Sync_Kind,
+
+	/**
+	 * If present save notifications are sent to the server. If omitted the
+	 * notification should not be sent.
+	 */
 	save     : Save_Options,
 }
 
@@ -155,21 +194,81 @@ Document_Link_Options :: struct {
 	resolveProvider: bool,
 }
 
-// Note(Dragos): We'll leave the names not snake_case to see if it works, then we'll do some json:"_" magic
+// TODO: add positionEncoding and other missing things
 Server_Capabilities :: struct {
-	textDocumentSync          : Text_Document_Sync_Options,
-	definitionProvider        : bool,
-	completionProvider        : Completion_Options,
-	signatureHelpProvider     : Signature_Help_Options,
-	semanticTokensProvider    : Semantic_Tokens_Options,
-	documentSymbolProvider    : bool,
-	hoverProvider             : bool,
-	documentFormattingProvider: bool,
-	inlayHintProvider         : bool,
-	renameProvider            : bool,
-	referenceProvider         : bool,
-	workspaceSymbolProvider   : bool,
-	documentLinkProvider      : Document_Link_Options,
+	/**
+	 * Defines how text documents are synced. Is either a detailed structure
+	 * defining each notification or for backwards compatibility the
+	 * TextDocumentSyncKind number. If omitted it defaults to
+	 * `TextDocumentSyncKind.None`.
+	 */
+	text_document_sync          : Text_Document_Sync_Options `json:"textDocumentSync"`,
+
+	/**
+	 * The server provides goto definition support.
+	 */
+	definition_provider         : bool `json:"definitionProvider"`,
+
+	/**
+	 * The server provides completion support.
+	 */
+	completion_provider         : Completion_Options `json:"completionProvider"`,
+
+	/**
+	 * The server provides signature help support.
+	 */
+	signature_help_provider     : Signature_Help_Options `json:"signatureHelpProvider"`,
+
+	/**
+	 * The server provides semantic tokens support.
+	 *
+	 * @since 3.16.0
+	 */
+	semantic_tokens_provider    : Semantic_Tokens_Options `json:"semanticTokensProvider"`,
+
+	/**
+	 * The server provides document symbol support.
+	 */
+	document_symbol_provider    : bool `json:"documentSymbolProvider"`,
+
+	/**
+	 * The server provides hover support.
+	 */
+	hover_provider              : bool `json:"hoverProvider"`,
+
+	/**
+	 * The server provides document formatting.
+	 */
+	document_formatting_provider: bool `json:"documentFormattingProvider"`,
+
+	/**
+	 * The server provides inlay hints.
+	 *
+	 * @since 3.17.0
+	 */
+	inlay_hint_provider         : bool `json:"inlayHintProvider"`,
+
+	/**
+	 * The server provides rename support. RenameOptions may only be
+	 * specified if the client states that it supports
+	 * `prepareSupport` in its initial `initialize` request.
+	 */
+	rename_provider             : bool `json:"renameProvider"`,
+
+	/**
+	 * The server provides find references support.
+	 */
+	references_provider          : bool `json:"referencesProvider"`,
+
+	/**
+	 * The server provides workspace symbol support.
+	 */
+	workspace_symbol_provider   : bool `json:"workspaceSymbolProvider"`,
+
+	/**
+	 * The server provides document link support.
+	 */
+	document_link_provider      : Document_Link_Options `json:"documentLinkProvider"`,
 }
 
 Server_Info :: struct {
@@ -650,6 +749,20 @@ poll_message :: proc(s: ^Server) -> bool {
 			response.result = result
 			send(response, s.write)
 		}
+
+	case "initialized":
+		msg: Notification_Message(Initialized_Params)
+		msg_parse_err := json.unmarshal(content_data, &msg, allocator = context.temp_allocator)
+		if msg_parse_err != nil {
+			log.errorf("Failed to parse parameters for message %s. Error %v", method, msg_parse_err)
+			return false
+		}
+		on_initialized := callbacks.on_initialized
+		if on_initialized != nil {
+			on_initialized(msg.params)
+		}
+	case:
+		log.logf(.Debug, "Received unhandled request %s", method)
 	}
 
 

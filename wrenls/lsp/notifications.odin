@@ -2,10 +2,10 @@ package lsp
 
 import "core:encoding/json"
 
-Notification_Message :: struct {
+Notification_Message :: struct($Params: typeid) {
 	jsonrpc: string,
 	method : string,
-	params : Notification_Params,
+	params : Params,
 }
 
 Publish_Diagnostics_Params :: struct {

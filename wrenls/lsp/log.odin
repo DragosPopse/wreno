@@ -59,7 +59,7 @@ logger_proc :: proc(
 	case .Error, .Fatal: message_type = .Error
 	}
 
-	notif := Notification_Message {
+	notif := Notification_Message(Log_Message_Params) {
 		jsonrpc = "2.0",
 		method = "window/logMessage",
 		params = Log_Message_Params {
@@ -114,7 +114,7 @@ default_assertion_failure_proc :: proc(prefix, message: string, loc: runtime.Sou
 		strings.write_string(&sb, message)
 	}
 	//strings.write_byte(&sb, '\n')
-	notif := Notification_Message {
+	notif := Notification_Message(Log_Message_Params) {
 		jsonrpc = "2.0",
 		method = "window/logMessage",
 		params = Log_Message_Params {

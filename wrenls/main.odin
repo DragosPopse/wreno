@@ -19,14 +19,18 @@ running := false // Note(Dragos): Move this somewhere else probably. A Server st
 
 
 initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result: lsp.Initialize_Result, error: Maybe(lsp.Response_Error)) {
+	caps: lsp.Server_Capabilities
+	
+	caps.text_document_sync = {
+		open_close = true,
+		change = .Full,
+		save = {include_text = true},
+	}
+
+	
+
 	result = lsp.Initialize_Result {
-		capabilities = {
-			semanticTokensProvider = {
-				full = true,
-				range = false, // Note(Dragos): I believe this requires some sort of incremental parsing
-				legend = {}, // Note(Dragos): This needs to be filled in
-			},
-		},
+		capabilities = caps,
 	}
 
 	client_info := params.client_info.? or_else {}
@@ -37,11 +41,16 @@ initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result
 	return
 }
 
+initialized :: proc(params: lsp.Initialized_Params) {
+
+}
+
 logger: lsp.Logger
 
 server := lsp.Server {
 	callbacks = {
 		on_initialize = initialize,
+		on_initialized = initialized,
 	},
 }
 

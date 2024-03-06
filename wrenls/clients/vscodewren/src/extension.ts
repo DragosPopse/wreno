@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { register_commands } from "./commands";
 import * as lc from 'vscode-languageclient/node';
 import { ServerOptions } from 'https';
+import 'process'
 
 let client: lc.LanguageClient;
 
@@ -15,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "wrenlsp" is now active!');
 
-	vscode.window.showInformationMessage('Wren LSP Client is now active.');
+	vscode.window.showInformationMessage('WrenLS extension at ' + process.cwd());
 
 	register_commands(context);
 

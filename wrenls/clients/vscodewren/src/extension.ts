@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
 	};
 
 	let client_options: lc.LanguageClientOptions = {
-		documentSelector: [{scheme: 'file', language: 'odin'}],
+		documentSelector: [{scheme: 'file', language: 'wren'}],
 		outputChannel: vscode.window.createOutputChannel("Wren Language Server"),
 	};
 

@@ -27,7 +27,9 @@ initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result
 		save = {include_text = true},
 	}
 
-	
+	caps.workspace_symbol_provider = true
+	caps.definition_provider = true
+	caps.hover_provider = true
 
 	result = lsp.Initialize_Result {
 		capabilities = caps,
@@ -42,7 +44,7 @@ initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result
 }
 
 initialized :: proc(params: lsp.Initialized_Params) {
-
+	log.infof("Received initialized notification.")
 }
 
 logger: lsp.Logger

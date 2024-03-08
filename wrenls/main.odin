@@ -47,12 +47,17 @@ initialized :: proc(params: lsp.Initialized_Params) {
 	log.infof("Received initialized notification.")
 }
 
+document_open :: proc(params: lsp.Did_Open_Text_Document_Params) {
+	log.infof("Text document %v has been opened containing text\n%s", params.text_document.uri, params.text_document.text)
+}
+
 logger: lsp.Logger
 
 server := lsp.Server {
 	callbacks = {
 		on_initialize = initialize,
 		on_initialized = initialized,
+		on_document_open = document_open,
 	},
 }
 

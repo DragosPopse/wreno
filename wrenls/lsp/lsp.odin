@@ -708,7 +708,8 @@ Server :: struct {
 
 	callbacks: struct {
 		on_initialize : proc(id: Request_Id, params: Initialize_Params) -> (result: Initialize_Result, error: Maybe(Response_Error)),
-		on_initialized: proc(params: Initialized_Params)
+		on_initialized: proc(params: Initialized_Params),
+		on_document_open: proc(params: Did_Open_Text_Document_Params),
 	}
 }
 
@@ -761,6 +762,20 @@ poll_message :: proc(s: ^Server) -> bool {
 		if on_initialized != nil {
 			on_initialized(msg.params)
 		}
+
+	case "textDocument/didOpen":
+		msg: Notification_Message(Did_Open_Text_Document_Params)
+		msg_parse_err := json.unmarshal(content_data, &msg, allocator = context.temp_allocator)
+		if msg_parse_err != nil {
+			log.errorf("Failed to parse parameters for message %s. Error %v", method, msg_parse_err)
+			return false
+		}
+		on_document_open := callbacks.on_document_open
+		if on_document_open != nil {
+			on_document_open(msg.params)
+		}
+
+
 	case:
 		log.logf(.Debug, "Received unhandled request %s", method)
 	}
@@ -778,23 +793,4 @@ log_json_message :: proc(msg: json.Object) {
 	} else {
 		log.warnf("Failed to log a received message: %v", err)
 	}
-}
-
-handle_json_message :: proc(msg: json.Object, writer: io.Writer) {
-	method := msg["method"].(string)
-	msg_id, has_id := msg["id"]
-	id: Request_Id
-	if has_id do #partial switch v in msg_id {
-	case string: id = v
-	case i64: id = v
-	case: log.error("Failed to cast the request id"); return
-	}
-	
-	switch method {
-	case "initialize":
-		
-	}
-
-
-	log_json_message(msg)
 }

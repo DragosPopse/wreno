@@ -31,6 +31,10 @@ initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result
 	caps.definition_provider = true
 	caps.hover_provider = true
 
+	caps.semantic_tokens_provider = {
+		full = true,
+	}
+
 	result = lsp.Initialize_Result {
 		capabilities = caps,
 	}

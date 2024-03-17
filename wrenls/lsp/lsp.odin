@@ -180,18 +180,12 @@ Signature_Help_Options :: struct {
 }
 
 Semantic_Tokens_Legend :: struct {
-	tokenTypes    : []string,
-	tokenModifiers: []string,
-}
-
-Semantic_Tokens_Options :: struct {
-	legend: Semantic_Tokens_Legend,
-	range : bool,
-	full  : bool,
+	token_types    : []string `json:"tokenTypes"`,
+	token_modifiers: []string `json:"tokenModifiers"`,
 }
 
 Document_Link_Options :: struct {
-	resolveProvider: bool,
+	resolve_provider: bool `json:"resolveProvider"`,
 }
 
 // TODO: add positionEncoding and other missing things
@@ -369,9 +363,7 @@ Document_Symbol :: struct {
 	children: []Document_Symbol,
 }
 
-Semantic_Tokens :: struct {
-	data: []u32,
-}
+
 
 Markup_Content :: struct {
 	kind : string,
@@ -710,6 +702,7 @@ Server :: struct {
 		on_initialize : proc(id: Request_Id, params: Initialize_Params) -> (result: Initialize_Result, error: Maybe(Response_Error)),
 		on_initialized: proc(params: Initialized_Params),
 		on_document_open: proc(params: Did_Open_Text_Document_Params),
+		on_semantic_tokens_full: proc(params: Semantic_Tokens_Params),
 	}
 }
 

@@ -134,6 +134,8 @@ Execute_Command_Client_Capabilities :: struct {
 	dynamic_registration: bool `json:"dynamicRegistration"`,
 }
 
+
+
 Semantic_Tokens_Workspace_Client_Capabilities :: struct {
 	/**
 	 * Whether the client implementation supports a refresh request sent from

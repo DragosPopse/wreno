@@ -471,6 +471,24 @@ Show_Document_Params :: struct {
 	selection: Maybe(Range),
 }
 
+Semantic_Tokens_Params :: struct {
+	/**
+	 * An optional token that a server can use to report work done progress.
+	 */
+	work_done_token: Progress_Token `json:"workDoneToken"`,
+
+	/**
+	 * An optional token that a server can use to report partial results (e.g.
+	 * streaming) to the client.
+	 */
+	partial_result_Token: Progress_Token `json:"partialResultToken"`,
+
+	/**
+	 * The text document.
+	 */
+	text_document: Text_Document_Identifier `json:"textDocument"`,
+}
+
 // note(Dragos): maybe this is not needed after all.
 // Note(Dragos): Some requests are sent from server to client only, while some (most) are sent from client to server.
 // we need a way to figure out how to get everything correctly setup in terms of API. I am not sure i currently like this approach

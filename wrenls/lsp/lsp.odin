@@ -702,7 +702,7 @@ Server :: struct {
 		on_initialize : proc(id: Request_Id, params: Initialize_Params) -> (result: Initialize_Result, error: Maybe(Response_Error)),
 		on_initialized: proc(params: Initialized_Params),
 		on_document_open: proc(params: Did_Open_Text_Document_Params),
-		on_semantic_tokens_full: proc(params: Semantic_Tokens_Params),
+		on_semantic_tokens_full: proc(id: Request_Id, params: Semantic_Tokens_Params) -> (result: Semantic_Tokens, error: Maybe(Response_Error)),
 	}
 }
 
@@ -768,6 +768,21 @@ poll_message :: proc(s: ^Server) -> bool {
 			on_document_open(msg.params)
 		}
 
+	case "textDocument/semanticTokens/full":
+		msg: Request_Message(Semantic_Tokens_Params)
+		msg_parse_err := json.unmarshal(content_data, &msg, allocator = context.temp_allocator)
+		if msg_parse_err != nil {
+			log.errorf("Failed to parse parameters for message %s. Error %v", method, msg_parse_err)
+		}
+		on_semantic_tokens_full := callbacks.on_semantic_tokens_full
+		if on_semantic_tokens_full != nil {
+			result, err := on_semantic_tokens_full(id, msg.params)
+			response: Response_Message
+			response.jsonrpc = "2.0.0"
+			response.id = id
+			response.result = result
+			send(response, s.write)
+		}
 
 	case:
 		log.logf(.Debug, "Received unhandled request %s", method)

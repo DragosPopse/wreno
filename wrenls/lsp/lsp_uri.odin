@@ -24,6 +24,7 @@ uri_to_filepath :: proc(uri: string, allocator := context.allocator) -> (path: s
                     strings.builder_destroy(&builder)
                     return
                 }
+                i += 2
                 strings.write_byte(&builder, cast(byte)v)
             } else {
                 strings.builder_destroy(&builder)

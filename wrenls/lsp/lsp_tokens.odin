@@ -168,8 +168,14 @@ token_encoder_make_capability_slices :: proc(encoder: Token_Encoder, allocator :
 }
 
 Encoded_Token :: struct {
-	
+	line: u32,
+	start_char: u32,
+	length: u32,
+	type: u32,
+	modifiers: u32,
 }
+
+
 
 Semantic_Tokens :: struct {
 	/**

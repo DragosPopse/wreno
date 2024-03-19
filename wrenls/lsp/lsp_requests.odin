@@ -511,6 +511,7 @@ Request_Params :: union {
 	Show_Document_Params,
 	Work_Done_Progress_Create_Params,
 	Work_Done_Progress_Cancel_Params,
+	Semantic_Tokens_Params,
 }
 
 // This is to be used for partial unmarshaling

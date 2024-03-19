@@ -118,6 +118,13 @@ initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result
 	return
 }
 
+semantic_tokens_full :: proc(id: lsp.Request_Id, params: lsp.Semantic_Tokens_Params) -> (result: lsp.Semantic_Tokens, err: Maybe(lsp.Response_Error)) {
+	log.infof("Requested semantic tokens for document %s", params.text_document.uri)
+	document_path, document_path_ok := lsp.uri_to_filepath(params.text_document.uri, context.temp_allocator)
+	log.infof("URI converted to %s", document_path)
+	return result, nil
+}
+
 initialized :: proc(params: lsp.Initialized_Params) {
 	log.infof("Received initialized notification.")
 }
@@ -133,6 +140,7 @@ server := lsp.Server {
 		on_initialize = initialize,
 		on_initialized = initialized,
 		on_document_open = document_open,
+		on_semantic_tokens_full = semantic_tokens_full,
 	},
 }
 

@@ -596,6 +596,7 @@ send :: proc(msg: any, writer: io.Writer) -> bool {
 	data, marshal_error := json.marshal(msg, {}, context.temp_allocator)
 	
 	if marshal_error != nil {
+		log.errorf("Error %v. Failed to marshal message %v", marshal_error, msg)
 		return false
 	}
 

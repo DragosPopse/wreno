@@ -122,6 +122,19 @@ semantic_tokens_full :: proc(id: lsp.Request_Id, params: lsp.Semantic_Tokens_Par
 	log.infof("Requested semantic tokens for document %s", params.text_document.uri)
 	document_path, document_path_ok := lsp.uri_to_filepath(params.text_document.uri, context.temp_allocator)
 	log.infof("URI converted to %s", document_path)
+
+	file_data, file_data_ok := os.read_entire_file(document_path, context.temp_allocator) // TODO(dragos): figure out a way to cache this. It will be quite inneficient to read the file every time
+
+	source := transmute(string)file_data
+
+	tokenizer := wren.default_tokenizer(source)
+	
+	
+	for token in wren.scan(&tokenizer) {
+		//log.infof("Got token %v", token)
+	}
+	
+
 	return result, nil
 }
 

@@ -179,6 +179,8 @@ skip_whitespace :: proc(t: ^Tokenizer) {
 	}
 }
 
+// TODO(DRAGOS): ADD PROPER ERROR HANDLING PROCEDURES. NO PRINTF NONSENSE
+
 @private
 lex_error :: proc(t: ^Tokenizer, format: string, args: ..any) {
 	//print_error(parser, parser.line_count, "Error", format, args)

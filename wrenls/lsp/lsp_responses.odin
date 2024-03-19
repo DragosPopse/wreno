@@ -17,7 +17,7 @@ Response_Error :: struct {
 	 * A primitive or structured value that contains additional
 	 * information about the error. Can be omitted.
 	 */
-	data: Maybe(json.Value),
+	data: Maybe(json.Value), // TODO(DRAGOS): Try to make this `any` rather than a json value
 }
 
 Response_Message :: struct {

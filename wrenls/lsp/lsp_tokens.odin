@@ -1,5 +1,7 @@
 package lsp
 
+import "core:log"
+
 Semantic_Tokens_Options :: struct {
 	legend: Semantic_Tokens_Legend,
 	range : bool,
@@ -103,6 +105,23 @@ Token_Encoder :: struct {
 	modifier_bits: [Semantic_Token_Modifier]u32, // modifier legend
 }
 
+encode_token_type :: proc "contextless" (encoder: Token_Encoder, token_type: Semantic_Token_Type) -> int {
+	if token_type not_in encoder.token_set do return -1
+	return encoder.token_indices[token_type]
+}
+
+encode_token_modifiers :: proc(encoder: Token_Encoder, modifiers: Semantic_Token_Modifiers, loc := #caller_location) -> u32 {
+	if modifiers > encoder.modifier_set {
+		log.errorf("Requested modifier encoding for %v but the encoder supports %v", modifiers, encoder.modifier_set, location = loc)
+		return 0
+	}
+	code := u32(0)
+	for mod in Semantic_Token_Modifier do if mod in modifiers {
+		code |= encoder.modifier_bits[mod]
+	}
+	return code
+}
+
 token_encoder_init :: proc(encoder: ^Token_Encoder, token_set: Semantic_Token_Types, modifier_set: Semantic_Token_Modifiers) {
 	encoder.token_set = token_set
 	encoder.modifier_set = modifier_set
@@ -148,14 +167,6 @@ token_encoder_make_capability_slices :: proc(encoder: Token_Encoder, allocator :
 	return token_types, token_modifiers
 }
 
-
-
-Encoded_Token :: struct {
-    delta_line: int,
-    delta_start_char: int,
-    token_type: Semantic_Token_Type, // TODO(Dragos): This kinda works because we are passing all the possible tokens on the usercode server side. What if we don't do that? 
-    token_modifiers: Semantic_Token_Modifiers,
-}
 
 Semantic_Tokens :: struct {
 	/**

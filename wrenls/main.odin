@@ -24,9 +24,32 @@ Wren_File :: struct {
 
 wren_files: map[string]Wren_File
 
+token_encoder: lsp.Token_Encoder
+
 
 initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result: lsp.Initialize_Result, error: Maybe(lsp.Response_Error)) {
 	caps: lsp.Server_Capabilities
+
+	// TODO(Dragos): modify this to satisfy wren specs
+	lsp.token_encoder_init(
+		encoder = &token_encoder,
+		token_set = {
+			.Namespace,
+			.Class,
+			.Parameter,
+			.Variable,
+			.Method,
+			.Keyword,
+			.Number,
+			.String,
+		},
+		modifier_set = {
+			.Declaration,
+			.Definition,
+			.Static,
+			.Deprecated,
+		},
+	)
 
 	client_semantic_tokens, client_semantic_tokens_ok := params.capabilities.text_document.semantic_tokens.?
 	
@@ -47,11 +70,14 @@ initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result
 	caps.definition_provider = true
 	caps.hover_provider = true
 
+	token_types, token_modifiers := lsp.token_encoder_make_capability_slices(token_encoder, context.temp_allocator)
+	
+	
 	caps.semantic_tokens_provider = {
 		full = true,
 		legend = { // TODO: cannot slice enumerated arrays wtf
-			//token_types = lsp.semantic_token_type_strings[:],
-			//token_modifiers = lsp.semantic_token_modifier_strings[:],
+			token_types = token_types,
+			token_modifiers = token_modifiers,
 		},
 	}
 	

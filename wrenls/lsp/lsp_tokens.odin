@@ -6,9 +6,6 @@ Semantic_Tokens_Options :: struct {
 	full  : bool,
 }
 
-Semantic_Token_Type_String :: distinct string
-Semantic_Token_Modifier_String :: distinct string
-
 Semantic_Token_Type :: enum u32 {
 	Namespace,
 	/**
@@ -42,7 +39,7 @@ Semantic_Token_Type :: enum u32 {
 	Decorator,
 }
 
-semantic_token_type_strings := [Semantic_Token_Type]Semantic_Token_Type_String {
+semantic_token_type_strings := [Semantic_Token_Type]string {
 	.Namespace      = "namespace",
 	.Type           = "type",
 	.Class          = "class",
@@ -85,7 +82,7 @@ Semantic_Token_Modifier :: enum u32 {
 
 Semantic_Token_Modifiers :: bit_set[Semantic_Token_Modifier; u32]
 
-semantic_token_modifier_strings := [Semantic_Token_Modifier]Semantic_Token_Modifier_String {
+semantic_token_modifier_strings := [Semantic_Token_Modifier]string {
 	.Declaration     = "declaration",
 	.Definition      = "definition",
 	.Readonly        = "readonly",
@@ -98,23 +95,57 @@ semantic_token_modifier_strings := [Semantic_Token_Modifier]Semantic_Token_Modif
 	.Default_Library = "defaultLibrary",
 }
 
+// Utility struct for encoding semantic tokens to be passed to the client
 Token_Encoder :: struct {
-	token_set: Semantic_Token_Types,
-	modifier_set: Semantic_Token_Modifiers,
-
-	token_types: []Semantic_Token_Type,
-	token_type_strings: []Semantic_Token_Type_String,
-	token_indices: [Semantic_Token_Type]int,
-
-	token_modifiers: []Semantic_Token_Modifier,
-	token_modifier_strings: []Semantic_Token_Modifier_String,
-	token_modifier_indices: [Semantic_Token_Modifier]int,
+	token_set: Semantic_Token_Types, // Supported tokens
+	modifier_set: Semantic_Token_Modifiers, // Supported modifiers
+	token_indices: [Semantic_Token_Type]int, // token legend
+	modifier_bits: [Semantic_Token_Modifier]u32, // modifier legend
 }
 
 token_encoder_init :: proc(encoder: ^Token_Encoder, token_set: Semantic_Token_Types, modifier_set: Semantic_Token_Modifiers) {
-	for token in Semantic_Token_Type do if token in token_set {
-		
+	encoder.token_set = token_set
+	encoder.modifier_set = modifier_set
+	{ // Token types are looked by index in the slice we make based on the token_set
+		index := 0
+		for token in Semantic_Token_Type do if token in token_set {
+			encoder.token_indices[token] = index
+			index += 1
+		}
 	}
+
+	{ // Token modifiers are also looked by index, but since a token can have multiple modifiers, we'll store the "bit" of each modifier. The index of a modifier is the bit set
+		bit := u32(1)
+		for modifier in Semantic_Token_Modifier do if modifier in modifier_set {
+			encoder.modifier_bits[modifier] = bit
+			bit <<= 1
+		}
+	}
+}
+
+// These slices are to be passed to Server_Capabilities.semantic_token_provider.legend
+token_encoder_make_capability_slices :: proc(encoder: Token_Encoder, allocator := context.allocator) -> (token_types: []string, token_modifiers: []string) {
+	token_set := encoder.token_set
+	modifier_set := encoder.modifier_set
+	tokens_len := card(token_set) // The number of 1-bits the in the bitset
+	modifiers_len := card(modifier_set)
+	token_types = make([]string, tokens_len, allocator)
+	token_modifiers = make([]string, modifiers_len, allocator)
+	{
+		index := 0
+		for token in Semantic_Token_Type do if token in token_set {
+			token_types[index] = semantic_token_type_strings[token]
+			index += 1
+		}
+	}
+	{
+		index := 0
+		for modifier in Semantic_Token_Modifier do if modifier in modifier_set {
+			token_modifiers[index] = semantic_token_modifier_strings[modifier]
+			index += 1
+		}
+	}
+	return token_types, token_modifiers
 }
 
 

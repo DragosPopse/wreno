@@ -74,6 +74,7 @@ initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result
 	
 	log.infof("Server tokens: %v\n %#v", token_types, token_encoder.token_indices)
 	log.infof("Server modifiers: %v\n %#v", token_modifiers, token_encoder.modifier_bits)
+	log.infof("Example encoded modifiers %v == %b", lsp.Semantic_Token_Modifiers{.Static, .Declaration, .Deprecated}, lsp.encode_token_modifiers(token_encoder, {.Static, .Declaration, .Deprecated}))
 	
 	caps.semantic_tokens_provider = {
 		full = true,

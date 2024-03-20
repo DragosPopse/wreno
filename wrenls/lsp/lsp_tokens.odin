@@ -125,8 +125,11 @@ token_encoder_init :: proc(encoder: ^Token_Encoder, token_set: Semantic_Token_Ty
 	}
 }
 
-encode_token_type :: proc "contextless" (encoder: Token_Encoder, token_type: Semantic_Token_Type) -> int {
-	if token_type not_in encoder.token_set do return -1
+encode_token_type :: proc(encoder: Token_Encoder, token_type: Semantic_Token_Type, loc := #caller_location) -> int {
+	if token_type not_in encoder.token_set {
+		log.errorf("Token type %v not found in the token set %v", token_type, encoder.token_set, location = loc)
+		return -1
+	}
 	return encoder.token_indices[token_type]
 }
 

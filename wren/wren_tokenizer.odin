@@ -43,6 +43,7 @@ Token_Kind :: enum {
 	Eq_Eq,
 	Bang_Eq,
 
+	_Keyword_Begin,
 	Break,
 	Continue,
 	Class,
@@ -64,6 +65,7 @@ Token_Kind :: enum {
 	True,
 	Var,
 	While,
+	_Keyword_End,
 
 	Field,
 	Static_Field,
@@ -189,6 +191,7 @@ skip_whitespace :: proc(t: ^Tokenizer) {
 	}
 }
 
+// TODO(Dragos): I only use this for a quick hack for scanning a number. FIX
 @private
 is_whitespace_or_lf :: proc(r: rune) -> bool {
 	switch r {
@@ -579,9 +582,6 @@ scan_raw_string :: proc(t: ^Tokenizer) -> (text: string) {
 		c := t.ch
 		c1 := peek_byte(t)
 		c2 := peek_byte(t, 1)
-		if c == '\n' {
-			t.line_count += 1
-		}
 		if c == '"' && c1 == '"' && c2 == '"' do break
 
 	}

@@ -46,6 +46,7 @@ initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result
 			.Keyword,
 			.Number,
 			.String,
+			.Comment,
 		},
 		modifier_set = {
 			.Declaration,
@@ -135,9 +136,36 @@ semantic_tokens_full :: proc(id: lsp.Request_Id, params: lsp.Semantic_Tokens_Par
 	
 	tokenizer.err = tokenizer_error_handler
 	
+	tokens_data := make([dynamic]u32, context.temp_allocator)
+	last_token := wren.default_token()
 	for token in wren.scan(&tokenizer) {
-		log.infof("Got token %v", token)
+		token := token
+		log.infof("Found %v", token)
+		//token.pos.line -= 1
+		//token.pos.column -= 1
+		encoded_token: lsp.Encoded_Token
+		encoded_token.line = auto_cast (token.pos.line - last_token.pos.line)
+		encoded_token.start_char = auto_cast token.pos.column
+		encoded_token.length = auto_cast len(token.text)
+		token_handled := false
+		#partial switch token.kind {
+		case .Comment: // Todo(Dragos): we are just experimenting right now, we need proper ways of encodng tokens in a nicer api
+			encoded_token.type = auto_cast lsp.encode_token_type(token_encoder, .Comment)
+			token_handled = true
+		}
+		
+		if token_handled {
+			append(&tokens_data, encoded_token.line)
+			append(&tokens_data, encoded_token.start_char)
+			append(&tokens_data, encoded_token.length)
+			append(&tokens_data, encoded_token.type)
+			append(&tokens_data, encoded_token.modifiers)
+			//log.infof("Handled token %v. Converted to %v", token, encoded_token)
+			last_token = token
+		}
 	}
+
+	result.data = tokens_data[:]
 	
 
 	return result, nil

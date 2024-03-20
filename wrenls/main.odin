@@ -141,17 +141,21 @@ semantic_tokens_full :: proc(id: lsp.Request_Id, params: lsp.Semantic_Tokens_Par
 	for token in wren.scan(&tokenizer) {
 		token := token
 		log.infof("Found %v", token)
-		//token.pos.line -= 1
-		//token.pos.column -= 1
+		token.pos.line -= 1
+		token.pos.column -= 1
 		encoded_token: lsp.Encoded_Token
 		encoded_token.line = auto_cast (token.pos.line - last_token.pos.line)
 		encoded_token.start_char = auto_cast token.pos.column
 		encoded_token.length = auto_cast len(token.text)
-		token_handled := false
+		token_handled := true
 		#partial switch token.kind {
 		case .Comment: // Todo(Dragos): we are just experimenting right now, we need proper ways of encodng tokens in a nicer api
 			encoded_token.type = auto_cast lsp.encode_token_type(token_encoder, .Comment)
-			token_handled = true
+		case ._Keyword_Begin..=._Keyword_End:
+			encoded_token.type = auto_cast lsp.encode_token_type(token_encoder, .Keyword)
+		case .String: // TODO(dragos): multiline tokens need to be handled differently...
+			encoded_token.type = auto_cast lsp.encode_token_type(token_encoder, .String)
+		case: token_handled = false
 		}
 		
 		if token_handled {

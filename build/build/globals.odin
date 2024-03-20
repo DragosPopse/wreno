@@ -73,6 +73,7 @@ _os_to_arg := [runtime.Odin_OS_Type]string {
 	.WASI = "wasi",
 	.JS = "js",
 	.Freestanding = "freestanding",
+	.Haiku = "haiku",
 }
 
 // To be combined with _target_to_arg

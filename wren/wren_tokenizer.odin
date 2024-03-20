@@ -189,6 +189,14 @@ skip_whitespace :: proc(t: ^Tokenizer) {
 	}
 }
 
+@private
+is_whitespace_or_lf :: proc(r: rune) -> bool {
+	switch r {
+	case ' ', '\t', '\r', '\n': return true
+	}
+	return false
+}
+
 // TODO(DRAGOS): ADD PROPER ERROR HANDLING PROCEDURES. NO PRINTF NONSENSE
 
 @private
@@ -488,7 +496,11 @@ scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 			advance_rune(t)
 			advance_rune(t)
 		case '.':
-		case: lex_error(t, "Expected either '.' or 'x' for a number literal starting with 0")
+		case: // TODO(DRAGOS): figure out a better way to handle 0. This seems a bit of a hack right now
+			if !is_whitespace_or_lf(auto_cast peek_byte(t)) {
+				lex_error(t, "Expected either '.' or 'x' for a number literal starting with 0")
+			}
+			
 		}
 	}
 

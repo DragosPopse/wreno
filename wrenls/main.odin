@@ -26,6 +26,10 @@ wren_files: map[string]Wren_File
 
 token_encoder: lsp.Token_Encoder
 
+tokenizer_error_handler :: proc(t: ^wren.Tokenizer, format: string, args: ..any) {
+	log.errorf(format, args)
+}
+
 
 initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result: lsp.Initialize_Result, error: Maybe(lsp.Response_Error)) {
 	caps: lsp.Server_Capabilities
@@ -129,9 +133,10 @@ semantic_tokens_full :: proc(id: lsp.Request_Id, params: lsp.Semantic_Tokens_Par
 
 	tokenizer := wren.default_tokenizer(source)
 	
+	tokenizer.err = tokenizer_error_handler
 	
 	for token in wren.scan(&tokenizer) {
-		//log.infof("Got token %v", token)
+		log.infof("Got token %v", token)
 	}
 	
 

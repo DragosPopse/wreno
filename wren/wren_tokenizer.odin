@@ -132,6 +132,15 @@ Tokenizer :: struct {
 	parens     : [MAX_INTERPOLATION_NESTING]int,   // Tracks the lexing state when tokenizing interpolated strings
 	num_parens : int,
 	has_errors : bool,
+	err: Error_Handler,
+}
+
+Error_Handler :: #type proc(t: ^Tokenizer, format: string, args: ..any)
+
+default_error_handler :: proc(t: ^Tokenizer, format: string, args: ..any) {
+	fmt.print("Lexing Error: ", "")
+	fmt.printf(format, args)
+	fmt.println()
 }
 
 tokenizer_init :: proc(t: ^Tokenizer) {
@@ -142,6 +151,7 @@ tokenizer_init :: proc(t: ^Tokenizer) {
 default_tokenizer :: proc(source: string) -> (t: Tokenizer) {
 	tokenizer_init(&t)
 	t.source = source
+	t.err = default_error_handler
 	return t
 }
 
@@ -183,10 +193,7 @@ skip_whitespace :: proc(t: ^Tokenizer) {
 
 @private
 lex_error :: proc(t: ^Tokenizer, format: string, args: ..any) {
-	//print_error(parser, parser.line_count, "Error", format, args)
-	fmt.print("Lexing Error: ", "")
-	fmt.printf(format, args)
-	fmt.println()
+	if t.err != nil do t.err(t, format, args)
 }
 
 @private

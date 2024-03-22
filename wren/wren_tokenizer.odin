@@ -117,6 +117,17 @@ Token_Pos :: struct {
 	column: int,
 }
 
+token_pos_relative :: proc(pos: Token_Pos, relative_to: Token_Pos) -> (result: Token_Pos) {
+	result.line = pos.line - relative_to.line
+	if pos.line == relative_to.line {
+		result.column = pos.column - relative_to.column
+	} else {
+		result.column = pos.column
+	}
+	result.offset = pos.offset
+	return result
+}
+
 default_token :: proc() -> Token {
 	return Token {
 		kind  = .Error,

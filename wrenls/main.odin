@@ -156,13 +156,28 @@ semantic_tokens_full :: proc(id: lsp.Request_Id, params: lsp.Semantic_Tokens_Par
 				strtok := strtok
 				strtok.pos.line -= 1
 				strtok.pos.column -= 1
-				log.infof("Found string %v", strtok)
-				encoded.line = auto_cast strtok.pos.line
-				encoded.start_char = auto_cast strtok.pos.column
+				relative := wren.token_pos_relative(strtok.pos, last_token.pos)
+				log.infof("relative: %v - %v = %v", strtok.pos.line, last_token.pos.line, relative.line)
+				//log.infof("Found string %v", strtok)
+				encoded.line = auto_cast relative.line
+				encoded.start_char = auto_cast relative.column
 				encoded.length = auto_cast len(strtok.text)
 				encoded.modifiers = 0
-				encoded = lsp.token_data_append(&tokens_data, encoded)
+				lsp.token_data_append(&tokens_data, encoded)
+				last_token = strtok
 			}
+		case ._Keyword_Begin..=._Keyword_End:
+			token := token
+			token.pos.line -= 1
+			token.pos.column -= 1
+			relative := wren.token_pos_relative(token.pos, last_token.pos)
+			encoded.type = lsp.encode_token_type(token_encoder, .Keyword)
+			encoded.line = auto_cast relative.line
+			encoded.start_char = auto_cast relative.column
+			encoded.length = auto_cast len(token.text)
+			encoded.modifiers = 0
+			lsp.token_data_append(&tokens_data, encoded)
+			last_token = token
 		}
 	}
 

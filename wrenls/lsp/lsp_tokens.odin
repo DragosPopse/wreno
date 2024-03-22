@@ -198,29 +198,12 @@ token_data_token_at :: proc(data: [dynamic]u32, index: int) -> Encoded_Token {
 	return token
 }
 
-token_data_append :: proc(data: ^[dynamic]u32, token: Encoded_Token) -> (encoded: Encoded_Token) {
-	token := token
-	last_token: Encoded_Token
-	token_count := token_data_token_count(data^)
-	if token_count > 0 {
-		last_token = token_data_token_at(data^, token_count - 1)
-	}
-
-	// Make things relative
-	if token.line == last_token.line {
-		token.start_char = token.start_char - last_token.start_char
-	}
-	log.infof("last_token: %v", last_token)
-	log.infof("token: %v", token)
-	token.line -= last_token.line
-	
+token_data_append :: proc(data: ^[dynamic]u32, token: Encoded_Token) {
 	append(data, token.line)
 	append(data, token.start_char)
 	append(data, token.length)
 	append(data, token.type)
 	append(data, token.modifiers)
-
-	return token
 }
 
 Semantic_Tokens :: struct {

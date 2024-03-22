@@ -97,6 +97,19 @@ Did_Open_Text_Document_Params :: struct {
 	 * The document that was opened.
 	 */
 	text_document: Text_Document_Item `json:"textDocument"`,
+
+	/**
+	 * Optional the content when saved. Depends on the includeText value
+	 * when the save notification was requested.
+	 */
+	text: Maybe(string),
+}
+
+Did_Save_Text_Document_Params :: struct {
+	/**
+	 * The document that was saved.
+	 */
+	text_docuemnt: Text_Document_Identifier,
 }
 
 Text_Document_Save_Reason :: enum {

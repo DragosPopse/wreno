@@ -704,6 +704,7 @@ Server :: struct {
 		on_initialized: proc(params: Initialized_Params),
 		on_document_open: proc(params: Did_Open_Text_Document_Params),
 		on_semantic_tokens_full: proc(id: Request_Id, params: Semantic_Tokens_Params) -> (result: Semantic_Tokens, error: Maybe(Response_Error)),
+		on_document_save: proc(params: Did_Save_Text_Document_Params),
 	}
 }
 

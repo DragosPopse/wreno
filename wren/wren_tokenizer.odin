@@ -124,6 +124,7 @@ token_pos_relative :: proc(pos: Token_Pos, relative_to: Token_Pos) -> (result: T
 	} else {
 		result.column = pos.column
 	}
+	log.infof("pos relative_to %v %v", pos.column, relative_to.column)
 	result.offset = pos.offset
 	return result
 }
@@ -389,6 +390,7 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 				advance_rune(t)
 				// The interpolation expr has ended, thus beginning the next section of the template string
 				t.num_parens -= 1
+				token.pos = offset_to_pos(t, offset)
 				token.text, token.kind = scan_string(t)
 				return token, true // Todo(dragos): make this correct
 			}
@@ -459,6 +461,7 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 			advance_rune(t)
 			advance_rune(t)
 		} else {
+			//token.pos = offset_to_pos(t, offset)
 			token.text, token.kind = scan_string(t)
 		}
 	
@@ -542,7 +545,8 @@ scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 	offset := t.offset
 	advance_rune(t) // We advance the first '"'. We know that it's that.
-
+	// Note(Dragos): It's not always '"', when a string is an interpolation ending.
+	
 	kind = .String
 	end_minus := 0
 	for {

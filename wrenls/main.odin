@@ -146,10 +146,12 @@ semantic_tokens_full :: proc(id: lsp.Request_Id, params: lsp.Semantic_Tokens_Par
 	
 	tokens_data := make([dynamic]u32, context.temp_allocator)
 	last_token := wren.default_token()
+	is_in_interpolation := false
 	for token in wren.scan(&tokenizer) {
 		encoded: lsp.Encoded_Token
 		#partial switch token.kind {
-		case .String:
+		case .String, .Interpolation:
+			
 			encoded.type = lsp.encode_token_type(token_encoder, .String)
 			string_tokens := wren.break_multiline_token(token, context.temp_allocator)
 			for strtok in string_tokens {

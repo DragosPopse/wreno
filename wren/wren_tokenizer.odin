@@ -604,6 +604,7 @@ scan_raw_string :: proc(t: ^Tokenizer) -> (text: string) {
 
 // Break a token that spans across multiple lines into multiple tokens. It's useful for the LSP
 // This will return a slice of tokens that all share the same type. 
+// TODO(DRAGOS): figure out the columns properly now. It's not enough to break by line. The columns need to match too now
 break_multiline_token :: proc(token: Token, allocator := context.allocator) -> (tokens: []Token) {
 	parts := strings.split(token.text, "\n", context.temp_allocator)
 	tokens = make([]Token, len(parts))
@@ -612,6 +613,7 @@ break_multiline_token :: proc(token: Token, allocator := context.allocator) -> (
 		//log.infof("pos.line i result: %v %v %v", token.pos.line, i, token.pos.line + i)
 		token.pos.line += i // TODO(Dragos): change the rest of the positions.
 		token.text = part
+		if i != 0 do token.pos.column = 1 // TODO(Dragos): This is a hack that assumes the multiline token starts at 0 again. It should work fine, but it's wonky
 		tokens[i] = token
 		//log.infof("Appended token: %v", tokens[i])
 	}

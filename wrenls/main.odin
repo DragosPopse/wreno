@@ -123,6 +123,14 @@ initialize :: proc(id: lsp.Request_Id, params: lsp.Initialize_Params) -> (result
 	return
 }
 
+append_encoded_token :: proc(data: ^[dynamic]u32, token: lsp.Encoded_Token) {
+	append(data, token.line)
+	append(data, token.start_char)
+	append(data, token.length)
+	append(data, token.type)
+	append(data, token.modifiers)
+}
+
 semantic_tokens_full :: proc(id: lsp.Request_Id, params: lsp.Semantic_Tokens_Params) -> (result: lsp.Semantic_Tokens, err: Maybe(lsp.Response_Error)) {
 	log.infof("Requested semantic tokens for document %s", params.text_document.uri)
 	document_path, document_path_ok := lsp.uri_to_filepath(params.text_document.uri, context.temp_allocator)
@@ -139,33 +147,30 @@ semantic_tokens_full :: proc(id: lsp.Request_Id, params: lsp.Semantic_Tokens_Par
 	tokens_data := make([dynamic]u32, context.temp_allocator)
 	last_token := wren.default_token()
 	for token in wren.scan(&tokenizer) {
-		token := token
-		log.infof("Found %v", token)
-		token.pos.line -= 1
-		token.pos.column -= 1
-		encoded_token: lsp.Encoded_Token
-		encoded_token.line = auto_cast (token.pos.line - last_token.pos.line)
-		encoded_token.start_char = auto_cast token.pos.column
-		encoded_token.length = auto_cast len(token.text)
-		token_handled := true
+		encoded: lsp.Encoded_Token
 		#partial switch token.kind {
-		case .Comment: // Todo(Dragos): we are just experimenting right now, we need proper ways of encodng tokens in a nicer api
-			encoded_token.type = auto_cast lsp.encode_token_type(token_encoder, .Comment)
-		case ._Keyword_Begin..=._Keyword_End:
-			encoded_token.type = auto_cast lsp.encode_token_type(token_encoder, .Keyword)
-		case .String: // TODO(dragos): multiline tokens need to be handled differently...
-			encoded_token.type = auto_cast lsp.encode_token_type(token_encoder, .String)
-		case: token_handled = false
+		case .String:
+			encoded.type = lsp.encode_token_type(token_encoder, .String)
+			string_tokens := wren.break_multiline_token(token, context.temp_allocator)
+			for strtok in string_tokens {
+				strtok := strtok
+				strtok.pos.line -= 1
+				strtok.pos.column -= 1
+				log.infof("Found string %v", strtok)
+				encoded.line = auto_cast strtok.pos.line
+				encoded.start_char = auto_cast strtok.pos.column
+				encoded.length = auto_cast len(strtok.text)
+				encoded.modifiers = 0
+				encoded = lsp.token_data_append(&tokens_data, encoded)
+			}
 		}
-		
-		if token_handled {
-			append(&tokens_data, encoded_token.line)
-			append(&tokens_data, encoded_token.start_char)
-			append(&tokens_data, encoded_token.length)
-			append(&tokens_data, encoded_token.type)
-			append(&tokens_data, encoded_token.modifiers)
-			//log.infof("Handled token %v. Converted to %v", token, encoded_token)
-			last_token = token
+	}
+
+	{
+		data_len := lsp.token_data_token_count(tokens_data)
+		for i in 0..<data_len {
+			encoded := lsp.token_data_token_at(tokens_data, i)
+			log.infof("%v", encoded)
 		}
 	}
 

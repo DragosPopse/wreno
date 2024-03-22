@@ -16,7 +16,13 @@ test_tokens :: proc(T: ^testing.T) {
 	vm := vm_new()
 	tokenizer := default_tokenizer(source)
 	for token in scan(&tokenizer) {
-		fmt.printf("(%d:%d) : [%v] - '%v'\n", token.pos.line, token.pos.column, token.kind, token.text if token.kind != .Line else "\\n")
+		if token.kind != .String {
+			fmt.printf("(%d:%d) : [%v] - '%v'\n", token.pos.line, token.pos.column, token.kind, token.text if token.kind != .Line else "\\n")
+		} else {
+			for token in break_multiline_token(token, context.temp_allocator) {
+				fmt.printf("(%d:%d) : [%v] - '%v'\n", token.pos.line, token.pos.column, token.kind, token.text if token.kind != .Line else "\\n")
+			}
+		}
 	}
 	free_all(context.temp_allocator)
 }

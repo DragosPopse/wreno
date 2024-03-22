@@ -1,16 +1,5 @@
-// First coent
-"string"
-var a = 23
-var b = 73
-var c = a * (a + b)
-
 """
 hello
+hi
+fdfd
 """
-"hello"
-
-"""bro"""
-
-// Comment
-
-// hello

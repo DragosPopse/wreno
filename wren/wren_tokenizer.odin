@@ -4,6 +4,7 @@ import "core:strings"
 import "core:fmt"
 import "core:strconv"
 import "core:unicode"
+import "core:log"
 import "core:unicode/utf8"
 
 Token_Kind :: enum {
@@ -447,7 +448,6 @@ scan :: proc(t: ^Tokenizer) -> (token: Token, ok: bool) {
 			advance_rune(t)
 			advance_rune(t)
 		} else {
-			advance_rune(t)
 			token.text, token.kind = scan_string(t)
 		}
 	
@@ -526,11 +526,14 @@ scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 }
 
 // Note(Dragos): Should this be allocated by the vm?
+// TODO(Dragos): Add some asserts on the raw advance_rune(t) calls
 @private
 scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 	offset := t.offset
+	advance_rune(t) // We advance the first '"'. We know that it's that.
+
 	kind = .String
-	end_minus := 1
+	end_minus := 0
 	for {
 		ch := t.ch
 		if ch == '\n' || ch < 0 {
@@ -569,10 +572,10 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 
 @private
 scan_raw_string :: proc(t: ^Tokenizer) -> (text: string) {
-	advance_rune(t)
-	advance_rune(t)
-	advance_rune(t)
 	offset := t.offset
+	advance_rune(t)
+	advance_rune(t)
+	advance_rune(t)
 	for {
 		advance_rune(t)
 		if t.ch == -1 {
@@ -585,5 +588,21 @@ scan_raw_string :: proc(t: ^Tokenizer) -> (text: string) {
 		if c == '"' && c1 == '"' && c2 == '"' do break
 
 	}
-	return t.source[offset : t.offset]
+	return t.source[offset : t.offset + 3] // We will add 3 to get the entire token. We need to check this if it's correct
+}
+
+// Break a token that spans across multiple lines into multiple tokens. It's useful for the LSP
+// This will return a slice of tokens that all share the same type. 
+break_multiline_token :: proc(token: Token, allocator := context.allocator) -> (tokens: []Token) {
+	parts := strings.split(token.text, "\n", context.temp_allocator)
+	tokens = make([]Token, len(parts))
+	for part, i in parts {
+		token := token
+		//log.infof("pos.line i result: %v %v %v", token.pos.line, i, token.pos.line + i)
+		token.pos.line += i // TODO(Dragos): change the rest of the positions.
+		token.text = part
+		tokens[i] = token
+		//log.infof("Appended token: %v", tokens[i])
+	}
+	return tokens
 }

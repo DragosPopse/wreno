@@ -125,12 +125,12 @@ token_encoder_init :: proc(encoder: ^Token_Encoder, token_set: Semantic_Token_Ty
 	}
 }
 
-encode_token_type :: proc(encoder: Token_Encoder, token_type: Semantic_Token_Type, loc := #caller_location) -> int {
+encode_token_type :: proc(encoder: Token_Encoder, token_type: Semantic_Token_Type, loc := #caller_location) -> u32 {
 	if token_type not_in encoder.token_set {
 		log.errorf("Token type %v not found in the token set %v", token_type, encoder.token_set, location = loc)
-		return -1
+		return 0
 	}
-	return encoder.token_indices[token_type]
+	return auto_cast encoder.token_indices[token_type]
 }
 
 encode_token_modifiers :: proc(encoder: Token_Encoder, modifiers: Semantic_Token_Modifiers, loc := #caller_location) -> u32 {
@@ -178,7 +178,50 @@ Encoded_Token :: struct {
 	modifiers: u32,
 }
 
+token_data_token_count :: proc(data: [dynamic]u32) -> int {
+	return len(data) / 5
+}
 
+token_data_last_token :: proc(data: [dynamic]u32) -> Encoded_Token {
+	return token_data_token_at(data, token_data_token_count(data) - 1)
+}
+
+token_data_token_at :: proc(data: [dynamic]u32, index: int) -> Encoded_Token {
+	assert(index < token_data_token_count(data))
+	start := data[index * 5 :]
+	token: Encoded_Token
+	token.line = start[0]
+	token.start_char = start[1]
+	token.length = start[2]
+	token.type = start[3]
+	token.modifiers = start[4]
+	return token
+}
+
+token_data_append :: proc(data: ^[dynamic]u32, token: Encoded_Token) -> (encoded: Encoded_Token) {
+	token := token
+	last_token: Encoded_Token
+	token_count := token_data_token_count(data^)
+	if token_count > 0 {
+		last_token = token_data_token_at(data^, token_count - 1)
+	}
+
+	// Make things relative
+	if token.line == last_token.line {
+		token.start_char = token.start_char - last_token.start_char
+	}
+	log.infof("last_token: %v", last_token)
+	log.infof("token: %v", token)
+	token.line -= last_token.line
+	
+	append(data, token.line)
+	append(data, token.start_char)
+	append(data, token.length)
+	append(data, token.type)
+	append(data, token.modifiers)
+
+	return token
+}
 
 Semantic_Tokens :: struct {
 	/**

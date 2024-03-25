@@ -150,7 +150,8 @@ semantic_tokens_full :: proc(id: lsp.Request_Id, params: lsp.Semantic_Tokens_Par
 	for token in wren.scan(&tokenizer) {
 		encoded: lsp.Encoded_Token
 		#partial switch token.kind {
-		case .String, .Interpolation:
+		case .String, .Interpolation: // TODO(Dragos): we can track if we are inside an interpolation and remove the "" from the tokenizer since it complicates things on the tokenizer side
+		// If case .String, if it's inside an interpolation, then we write an additional token for the ')' prior to it, we search backwards, since it's an interp end. If we aren't interpolating then we search backwards for '"' and forward for '"'. Simple.
 			
 			encoded.type = lsp.encode_token_type(token_encoder, .String)
 			string_tokens := wren.break_multiline_token(token, context.temp_allocator)

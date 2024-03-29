@@ -137,7 +137,6 @@ default_token :: proc() -> Token {
 }
 
 Tokenizer :: struct {
-	module     : ^Module,                          // module being tokenized
 	source     : string,
 	ch         : rune,                             // the most recent rune
 	offset     : int,                              // offset of [ch]

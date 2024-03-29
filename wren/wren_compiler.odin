@@ -50,8 +50,17 @@ Class_Info :: struct {
 	signature        : ^Signature,        //The signature of the method being compiled
 }
 
+Parser :: struct {
+	vm: ^VM,
+	module: ^Module,
+	source: string,
+	current_token: Token,
+	next_token: Token,
+	previous_token: Token,
+}
+
 Compiler :: struct {
-	parser         : ^Parser,
+	tokenizer: ^Tokenizer,
 	parent         : ^Compiler,                        // The compiler for the function enclosing this one, or nil if it's the top level
 	locals         : [MAX_LOCALS]Local,                // The currently in scope local variables
 	num_locals     : int,
@@ -65,6 +74,38 @@ Compiler :: struct {
 	is_initializer : bool,                             // Whether or not the compiler is for a constructor initializer
 	num_attributes : int,                              // The num of attributes seen while parsing. We track this separately as compile time attributes are not stored, so we can't rely on attributes.count to enforce an error message when attributes are used anywhere other than methods or classes
 	attributes     : ^Map,                             // Attributes for the next class or method
+}
+
+Precedence :: enum {
+	None,
+	Lowest,
+	Assignment,
+	Logical_Or,
+	Logical_And,
+	Equality,
+	Is,
+	Comparison,
+	Bitwise_Or,
+	Bitwise_Xor,
+	Bitwise_And,
+	Bitwise_Shift,
+	Range,
+	Term,
+	Factor,
+	Unary,
+	Call,
+	Primary,
+}
+
+Grammar_Fn :: #type proc(compiler: ^Compiler, can_assign: bool)
+Signature_Fn :: #type proc(compiler: ^Compiler, signature: ^Signature)
+
+Grammar_Rule :: struct {
+	prefix: Grammar_Fn,
+	infix: Grammar_Fn,
+	method: Signature_Fn,
+	precendence: Precedence,
+	name: string,
 }
 
 Scope :: enum {
@@ -117,216 +158,3 @@ Signature :: struct {
 	arity: int,
 }
 
-
-
-@private
-compiler_init :: proc(compiler: ^Compiler, parser: ^Parser, parent: ^Compiler, is_method: bool) {
-	compiler.parser = parser
-	compiler.parent = parent
-	compiler.loop = nil
-	compiler.enclosing_class = nil
-	compiler.is_initializer = false
-
-	compiler.fn = nil
-	compiler.constants = nil
-	compiler.attributes = nil
-
-	parser.vm.compiler = compiler
-
-	// Declare a local slot for either the closure or method receiver so that we
-  	// don't try to reuse that slot for a user-defined local variable. For
-  	// methods, we name it "this", so that we can resolve references to that like
-  	// a normal variable. For functions, they have no explicit "this", so we use
-  	// an empty name. That way references to "this" inside a function walks up
-  	// the parent chain to find a method enclosing the function whose "this" we
-  	// can close over.
-	compiler.num_locals = 1
-	compiler.num_slots = compiler.num_locals
-
-	if is_method {
-		compiler.locals[0].name = "this"
-	}
-
-	compiler.locals[0].depth = -1
-	compiler.locals[0].is_upvalue = false
-
-	if parent == nil {
-		compiler.scope_depth = -1 // Compiling top level code
-	} else {
-		compiler.scope_depth = 0 // The initial scope is local scope
-	}
-
-	compiler.num_attributes = 0
-	compiler.attributes = map_make(parser.vm)
-	compiler.fn = fn_make(parser.vm, parser.module, compiler.num_locals)
-}
-
-@private
-disallow_attributes :: proc(compiler: ^Compiler) {
-
-}
-
-@private
-add_to_attribute_group :: proc(compiler: ^Compiler, group, key, value: Value) {
-
-}
-
-@private
-emit_class_attributes :: proc(compiler: ^Compiler, class_info: ^Class_Info) {
-
-}
-
-@private
-copy_method_attributes :: proc(compiler: ^Compiler, is_foreign: bool, is_static: bool, full_signature: string) {
-
-}
-
-@private
-print_error :: proc(parser: ^Parser, line: int, label: string, format: string, args: ..any) {
-	parser.has_errors = true
-	if !parser.print_errors do return
-	if parser.vm.config.error == nil do return
-	module_name := parser.module.name.text if parser.module.name.text != "" else "<invalid>"
-	err_string := fmt.tprintf(format, args)
-	err_string = fmt.tprintf("%s: %s", label, err_string)
-	parser.vm.config.error(parser.vm, .Compile, module_name, line, err_string)
-}
-
-
-@private
-error :: proc(compiler: ^Compiler, format: string, args: ..any) {
-	token := compiler.parser.previous
-	if token.kind == .Error do return // If the parse error was caused by an error token, the lexer has already reported it
-	if token.kind == .Line {
-		print_error(compiler.parser, token.pos.line, "Error at newline", format, args)
-	} else if token.kind == .EOF {
-		print_error(compiler.parser, token.pos.line, "Error at end of file", format, args)
-	} else {
-		label := fmt.tprintf("Error at '%s'", token.text)
-		print_error(compiler.parser, token.pos.line, label, format, args)
-	}
-}
-
-// Add [constant] to the constant pool and returns it's index
-@private
-add_constant :: proc(compiler: ^Compiler, constant: Value) -> int {
-	if compiler.parser.has_errors do return -1
-	// see if we already have a constant for the value, and reuse it if so
-	if compiler.constants != nil {
-		existing := map_get(compiler.constants, constant)
-		if is_number(existing) do return cast(int)to_number(existing)
-	}
-	if len(compiler.fn.constants) < cast(int)MAX_CONSTANTS {
-		if is_object(constant) do push_root(compiler.parser.vm, to_object(constant))
-		append(&compiler.fn.constants, constant)
-		if is_object(constant) do pop_root(compiler.parser.vm)
-		if compiler.constants == nil {
-			compiler.constants = map_make(compiler.parser.vm)
-		}
-		map_set(compiler.parser.vm, compiler.constants, constant, to_value(cast(f64)len(compiler.fn.constants) - 1))
-	} else {
-		error(compiler, "A function may only contain %d unique constants.", MAX_CONSTANTS)
-	}
-	return len(compiler.fn.constants) - 1
-}
-
-// Create a new local variable with [name]. Assuems the current scope is local and the name is unique
-@private
-add_local :: proc(compiler: ^Compiler, name: string) -> int {
-	local := &compiler.locals[compiler.num_locals]
-	local.name = name
-	local.is_upvalue = false
-	local.depth = compiler.scope_depth
-	compiler.num_locals += 1
-	return compiler.num_locals - 1
-}
-
-// Declares a variable in the current scope whose name is the given token.
-//
-// If [token] is `NULL`, uses the previously consumed token. Returns its symbol.
-@private
-compiler_declare_variable :: proc(compiler: ^Compiler, token: ^Token) {
-	if token == nil {
-		unimplemented("token = &compiler->parser->previous")
-	}
-	if len(token.text) > MAX_VARIABLE_NAME {
-		error(compiler, "Variable name cannot be longer than %d characters.", MAX_VARIABLE_NAME)
-	}
-
-	// top level module scope
-	if compiler.scope_depth == -1 {
-		line := -1
-		unimplemented()
-	}
-}
-
-compile :: proc(vm: ^VM, module: ^Module, source: string, is_expression: bool, print_errors: bool) -> ^Fn {
-	source := source
-	// skip utf-8 BOM
-	if utf8.rune_at(source, 0) == utf8.RUNE_BOM {
-		w := utf8.rune_size(utf8.RUNE_BOM)
-		source = source[w:]
-	}
-
-	unimplemented()
-}
-
-// Emits one single-byte argument. Returns it's index
-@private
-emit_byte :: proc(compiler: ^Compiler, byte: byte) -> int {
-	append(&compiler.fn.code, byte)
-	// Assume the instruction is assocciated with the most recently consumed token
-	append(&compiler.fn.debug.source_lines, compiler.parser.previous.pos.line)
-	return len(compiler.fn.code) - 1
-}
-
-// Emits one bytecode instruction
-@private
-emit_op :: proc(compiler: ^Compiler, instruction: Code) {
-	emit_byte(compiler, auto_cast instruction)
-	
-	// keep track of the stack's high water mark
-	compiler.num_slots += stack_effects[instruction]
-	if compiler.num_slots > compiler.fn.max_slots {
-		compiler.fn.max_slots = compiler.num_slots
-	}
-}
-
-// Emits one 16-bit argument, written big endian
-@private
-emit_short :: proc(compiler: ^Compiler, arg: i16) {
-	emit_byte(compiler, byte((arg >> 8) & 0xFF))
-	emit_byte(compiler, byte(arg & 0xFF))
-} 
-
-// Note(Dragos): I'm not sure if this abstraction is gonna do any good. 
-// Emits one bytecode instruction followed by a 8-bit argument. Returns the index of the argument in bytecode
-@private
-emit_byte_arg :: proc(compiler: ^Compiler, instruction: Code, arg: byte) -> int {
-	emit_op(compiler, instruction)
-	return emit_byte(compiler, arg)
-}
-
-@private
-emit_short_arg :: proc(compiler: ^Compiler, instruction: Code, arg: i16) {
-	emit_op(compiler, instruction)
-	emit_short(compiler, arg)
-}
-
-// Emits [instruction] followed by a placeholder for a jump offset. 
-// The placeholder can be patched by calling [jump_patch]. 
-// Returns the index of the placeholder
-@private
-emit_jump :: proc(compiler: ^Compiler, instruction: Code) -> int {
-	emit_op(compiler, instruction)
-	emit_byte(compiler, 0xff)
-	return emit_byte(compiler, 0xff) - 1
-}
-
-// Creates a new constant for the current value and emits the bytecode to load
-// it from the constant table.
-@private
-emit_constant :: proc(compiler: ^Compiler, value: Value) {
-	constant := add_constant(compiler, value)
-	emit_short_arg(compiler, .CONSTANT, cast(i16)constant)
-}

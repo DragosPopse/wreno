@@ -543,10 +543,10 @@ scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 // TODO(Dragos): Add some asserts on the raw advance_rune(t) calls
 @private
 scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
-	offset := t.offset
+	
 	advance_rune(t) // We advance the first '"'. We know that it's that.
 	// Note(Dragos): It's not always '"', when a string is an interpolation ending.
-	
+	offset := t.offset
 	kind = .String
 	end_minus := 1
 	for {

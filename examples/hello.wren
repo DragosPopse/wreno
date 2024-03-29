@@ -7,4 +7,4 @@ fdfd
 var a
 var b
 
-var format = "hello %(a) world"
+var format = "hello %("hello") world"

@@ -548,7 +548,7 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 	// Note(Dragos): It's not always '"', when a string is an interpolation ending.
 	
 	kind = .String
-	end_minus := 0
+	end_minus := 1
 	for {
 		ch := t.ch
 		if ch == '\n' || ch < 0 {
@@ -587,10 +587,11 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 
 @private
 scan_raw_string :: proc(t: ^Tokenizer) -> (text: string) {
+	advance_rune(t)
+	advance_rune(t)
+	advance_rune(t)
 	offset := t.offset
-	advance_rune(t)
-	advance_rune(t)
-	advance_rune(t)
+
 	for {
 		advance_rune(t)
 		if t.ch == -1 {
@@ -603,7 +604,7 @@ scan_raw_string :: proc(t: ^Tokenizer) -> (text: string) {
 		if c == '"' && c1 == '"' && c2 == '"' do break
 
 	}
-	return t.source[offset : t.offset + 3] // We will add 3 to get the entire token. We need to check this if it's correct
+	return t.source[offset : t.offset] // We will add 3 to get the entire token. We need to check this if it's correct
 }
 
 // Break a token that spans across multiple lines into multiple tokens. It's useful for the LSP

@@ -141,6 +141,60 @@ rules := #partial [Token_Kind]Grammar_Rule {
 	.Dot           = RULE_INFIX(.Call, call),
 	.Dot_Dot       = RULE_INFIX_OP(.Range, ".."),
 	.Dot_Dot_Dot   = RULE_INFIX_OP(.Range, "..."),
+	.Comma         = RULE_UNUSED,
+	.Star          = RULE_INFIX_OP(.Factor, "*"),
+	.Slash         = RULE_INFIX_OP(.Factor, "/"),
+	.Percent       = RULE_INFIX_OP(.Factor, "%"),
+	.Hash          = RULE_UNUSED,
+	.Plus          = RULE_INFIX_OP(.Term, "+"),
+	.Minus         = RULE_OP("-"),
+	.Lt_Lt         = RULE_INFIX_OP(.Bitwise_Shift, "<<"),
+	.Gt_Gt         = RULE_INFIX_OP(.Bitwise_Shift, ">>"),
+	.Pipe          = RULE_INFIX_OP(.Bitwise_Or, "|"),
+	.Pipe_Pipe     = RULE_INFIX(.Logical_Or, or_),
+	.Caret         = RULE_INFIX_OP(.Bitwise_Xor, "^"),
+	.Amp           = RULE_INFIX_OP(.Bitwise_And, "&"),
+	.Amp_Amp       = RULE_INFIX(.Logical_And, and_),
+	.Bang          = RULE_PREFIX_OP("!"),
+	.Tilde         = RULE_PREFIX_OP("~"),
+	.Question      = RULE_INFIX(.Assignment, conditional),
+	.Eq            = RULE_UNUSED,
+	.Lt            = RULE_INFIX_OP(.Comparison, "<"),
+	.Gt            = RULE_INFIX_OP(.Comparison, ">"),
+	.Lt_Eq         = RULE_INFIX_OP(.Comparison, "<="),
+	.Gt_Eq         = RULE_INFIX_OP(.Comparison, ">="),
+	.Eq_Eq         = RULE_INFIX_OP(.Equality, "=="),
+	.Bang_Eq       = RULE_INFIX_OP(.Equality, "!="),
+	.Break         = RULE_UNUSED,
+	.Continue      = RULE_UNUSED,
+	.Class         = RULE_UNUSED,
+	.Construct     = {nil, nil, constructor_signature, .None, ""},
+	.Else          = RULE_UNUSED,
+	.False         = RULE_PREFIX(boolean),
+	.For           = RULE_UNUSED,
+	.Foreign       = RULE_UNUSED,
+	.If            = RULE_UNUSED,
+	.Import        = RULE_UNUSED,
+	.As            = RULE_UNUSED,
+	.In            = RULE_UNUSED,
+	.Is            = RULE_INFIX_OP(.Is, "is"),
+	.Null          = RULE_PREFIX(null),
+	.Return        = RULE_UNUSED,
+	.Static        = RULE_UNUSED,
+	.Super         = RULE_PREFIX(super_),
+	.This          = RULE_PREFIX(this_),
+	.True          = RULE_PREFIX(boolean),
+	.Var           = RULE_UNUSED,
+	.While         = RULE_UNUSED,
+	.Field         = RULE_PREFIX(field),
+	.Static_Field  = RULE_PREFIX(static_field),
+	.Name          = {name, nil, named_signature, .None, ""},
+	.Number        = RULE_PREFIX(literal),
+	.String        = RULE_PREFIX(literal),
+	.Interpolation = RULE_PREFIX(string_interpolation),
+	.Line          = RULE_UNUSED,
+	.Error         = RULE_UNUSED,
+	.EOF           = RULE_UNUSED,
 }
 
 Scope :: enum {
@@ -201,6 +255,27 @@ next_token :: proc(p: ^Parser) {
 	p.next, _ = scan(&p.t)
 }
 
+match :: proc(c: ^Compiler, expected: Token_Kind) -> bool {
+	if c.parser.current.kind != expected do return false
+	next_token(c.parser)
+	return true
+}
+
+match_line :: proc(c: ^Compiler) -> bool {
+	if !match(c, .Line) do return false
+	for match(c, .Line) {} // Note(Dragos): Would this always return true?
+	return true
+}
+
+ignore_newlines :: proc(c: ^Compiler) {
+	match_line(c)
+}
+
+consume_line :: proc(c: ^Compiler, err_msg: string) {
+	consume(c, .Line, err_msg)
+	ignore_newlines(c)
+}
+
 compiler_init :: proc(c: ^Compiler, p: ^Parser, parent: ^Compiler, is_method: bool) {
 	c.parser = p
 	c.parent = parent
@@ -222,6 +297,14 @@ compiler_init :: proc(c: ^Compiler, p: ^Parser, parent: ^Compiler, is_method: bo
 	/// TODO(Dragos): Figure out the vm into all this single pass mess.
 	//c.attributes = map_make(vm)
 	//c.fn = fn_make(vm, module, compiler.num_locals)
+}
+
+consume :: proc(c: ^Compiler, expected: Token_Kind, err_msg: string) {
+	next_token(c.parser)
+	if c.parser.previous.kind != expected {
+		fmt.print(err_msg) // TODO: FIX ERRORING
+		if c.parser.current.kind == expected do next_token(c.parser)
+	}
 }
 
 compile :: proc(vm: ^VM, module: ^Module, source: string, is_expression: bool) -> ^Fn {
@@ -262,6 +345,16 @@ parse_precedence :: proc(c: ^Compiler, prec: Precedence) {
  	// we pass in whether or not it appears in a context loose enough to allow
  	// "=". If so, it will parse the "=" itself and handle it appropriately.
 	can_assign := prec <= .Conditional
+	prefix(c, can_assign)
+	for prec <= rules[c.parser.current.kind].precendence {
+		next_token(c.parser)
+		infix := rules[c.parser.previous.kind].infix
+		infix(c, can_assign)
+	}
+}
+
+get_rule :: proc(kind: Token_Kind) -> Grammar_Rule {
+	return rules[kind]
 }
 
 grouping :: proc(c: ^Compiler, can_assign: bool) {
@@ -269,7 +362,19 @@ grouping :: proc(c: ^Compiler, can_assign: bool) {
 }
 
 list :: proc(c: ^Compiler, can_assign: bool) {
+	// TODO loadCoreVariable callMethod
+	for {
+		ignore_newlines(c)
+		if c.parser.current.kind == .Right_Bracket do break
 
+		expression(c) // The element
+		// call_method(compiler, 1 "addCore_(_)")
+		if !match(c, .Comma) do break
+	}
+
+	// allow newlines before the closing ]
+	ignore_newlines(c)
+	consume(c, .Right_Bracket, "Expected ']' after list elements")
 }
 
 map_lit :: proc(c: ^Compiler, can_assign: bool) {
@@ -284,12 +389,24 @@ subscript :: proc(c: ^Compiler, can_assign: bool) {
 
 }
 
+boolean :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+null :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
 subscript_signature :: proc(c: ^Compiler, sig: ^Signature) {
 
 }
 
 infix_op :: proc(c: ^Compiler, can_assign: bool) {
-
+	rule := get_rule(c.parser.previous.kind)
+	ignore_newlines(c)
+	parse_precedence(c, Precedence(cast(int)rule.precendence + 1))
+	sig := Signature { rule.name, .Method, 1 } 
+	call_signature(c, .CALL_0, &sig)
 }
 
 infix_signature :: proc(c: ^Compiler, sig: ^Signature) {
@@ -300,10 +417,62 @@ mixed_signature :: proc(c: ^Compiler, sig: ^Signature) {
 
 }
 
+named_signature :: proc(c: ^Compiler, sig: ^Signature) {
+
+}
+
 unary_signature :: proc(c: ^Compiler, sig: ^Signature) {
 
 }
 
+call_signature :: proc(c: ^Compiler, instruction: Code, sig: ^Signature) {
+
+}
+
+constructor_signature :: proc(c: ^Compiler, sig: ^Signature) {
+
+}
+
+or_ :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+and_ :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+super_ :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+this_ :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+field :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+name :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+static_field :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+literal :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+string_interpolation :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+
+conditional :: proc(c: ^Compiler, can_assign: bool) {
+
+}
 
 
 call :: proc(c: ^Compiler, can_assign: bool) {

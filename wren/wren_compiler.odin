@@ -51,16 +51,15 @@ Class_Info :: struct {
 }
 
 Parser :: struct {
+	t: Tokenizer,
 	vm: ^VM,
-	module: ^Module,
-	source: string,
-	current_token: Token,
-	next_token: Token,
-	previous_token: Token,
+	current: Token,
+	next: Token,
+	previous: Token,
 }
 
 Compiler :: struct {
-	tokenizer: ^Tokenizer,
+	parser: ^Parser,
 	parent         : ^Compiler,                        // The compiler for the function enclosing this one, or nil if it's the top level
 	locals         : [MAX_LOCALS]Local,                // The currently in scope local variables
 	num_locals     : int,
@@ -79,21 +78,22 @@ Compiler :: struct {
 Precedence :: enum {
 	None,
 	Lowest,
-	Assignment,
-	Logical_Or,
-	Logical_And,
-	Equality,
-	Is,
-	Comparison,
-	Bitwise_Or,
-	Bitwise_Xor,
-	Bitwise_And,
-	Bitwise_Shift,
-	Range,
-	Term,
-	Factor,
-	Unary,
-	Call,
+	Assignment,    // =
+	Conditional,   // ?:
+	Logical_Or,    // ||
+	Logical_And,   // &&
+	Equality,      // == !=
+	Is,            // is
+	Comparison,    // < > <= >=
+	Bitwise_Or,    // |
+	Bitwise_Xor,   // ^
+	Bitwise_And,   // &
+	Bitwise_Shift, // << >>
+	Range,         // .. ...
+	Term,          // + -
+	Factor,        // * / %
+	Unary,         // unary - ! ~
+	Call,          // . () []
 	Primary,
 }
 
@@ -106,6 +106,41 @@ Grammar_Rule :: struct {
 	method: Signature_Fn,
 	precendence: Precedence,
 	name: string,
+}
+
+RULE_UNUSED :: Grammar_Rule{}
+
+RULE_PREFIX :: #force_inline proc(prefix: Grammar_Fn) -> Grammar_Rule {
+	return {prefix, nil, nil, .None, ""}
+}
+
+RULE_INFIX :: #force_inline proc(prec: Precedence, fn: Grammar_Fn) -> Grammar_Rule {
+	return {nil, fn, nil, prec, ""}
+}
+
+RULE_INFIX_OP :: #force_inline proc(prec: Precedence, name: string) -> Grammar_Rule {
+	return {nil, infix_op, infix_signature, prec, name}
+}
+
+RULE_PREFIX_OP :: #force_inline proc(name: string) -> Grammar_Rule {
+	return {unary_op, nil, unary_signature, .None, name}
+}
+
+RULE_OP :: #force_inline proc(name: string) -> Grammar_Rule {
+	return {unary_op, infix_op, mixed_signature, .Term, name}
+}
+
+rules := #partial [Token_Kind]Grammar_Rule {
+	.Left_Paren    = RULE_PREFIX(grouping),
+	.Right_Paren   = RULE_UNUSED,
+	.Left_Bracket  = {list, subscript, subscript_signature, .Call, ""},
+	.Right_Bracket = RULE_UNUSED,
+	.Left_Brace    = RULE_PREFIX(map_lit),
+	.Right_Brace   = RULE_UNUSED,
+	.Colon         = RULE_UNUSED,
+	.Dot           = RULE_INFIX(.Call, call),
+	.Dot_Dot       = RULE_INFIX_OP(.Range, ".."),
+	.Dot_Dot_Dot   = RULE_INFIX_OP(.Range, "..."),
 }
 
 Scope :: enum {
@@ -158,3 +193,119 @@ Signature :: struct {
 	arity: int,
 }
 
+next_token :: proc(p: ^Parser) {
+	p.previous = p.current
+	p.current = p.next
+	if p.next.kind == .EOF do return
+	if p.current.kind == .EOF do return
+	p.next, _ = scan(&p.t)
+}
+
+compiler_init :: proc(c: ^Compiler, p: ^Parser, parent: ^Compiler, is_method: bool) {
+	c.parser = p
+	c.parent = parent
+	p.vm.compiler = c
+	c.num_locals = 1
+	c.num_slots = c.num_locals
+	if is_method {
+		c.locals[0].name = "this"
+	}
+	c.locals[0].depth = -1
+	c.locals[0].is_upvalue = false
+
+	if parent == nil { // Compiling top-level code, so the initial scope is module-level
+		c.scope_depth = -1
+	} else { // The initial scope for functions and methods is local scope
+		c.scope_depth = 0
+	}
+
+	/// TODO(Dragos): Figure out the vm into all this single pass mess.
+	//c.attributes = map_make(vm)
+	//c.fn = fn_make(vm, module, compiler.num_locals)
+}
+
+compile :: proc(vm: ^VM, module: ^Module, source: string, is_expression: bool) -> ^Fn {
+	p: Parser
+	p.t = default_tokenizer(source)
+	next_token(&p)
+	next_token(&p)
+	
+	num_existing_variables := len(module.variables)
+
+	c: Compiler
+	compiler_init(&c, &p, nil, false)
+
+	if is_expression {
+		
+	}
+
+
+	return nil
+}
+
+expression :: proc(c: ^Compiler) {
+	parse_precedence(c, .Lowest)
+}
+
+parse_precedence :: proc(c: ^Compiler, prec: Precedence) {
+	next_token(c.parser)
+	prefix := rules[c.parser.previous.kind].prefix
+	if prefix == nil {
+		fmt.eprintf("Expected expression\n") // TODO(DRAGOS): FIX ERRORING
+		return
+	}
+	// Track if the precendence of the surrounding expression is low enough to
+ 	// allow an assignment inside this one. We can't compile an assignment like
+ 	// a normal expression because it requires us to handle the LHS specially --
+ 	// it needs to be an lvalue, not an rvalue. So, for each of the kinds of
+ 	// expressions that are valid lvalues -- names, subscripts, fields, etc. --
+ 	// we pass in whether or not it appears in a context loose enough to allow
+ 	// "=". If so, it will parse the "=" itself and handle it appropriately.
+	can_assign := prec <= .Conditional
+}
+
+grouping :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+list :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+map_lit :: proc(c: ^Compiler, can_assign: bool) {
+	
+}
+
+unary_op :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+subscript :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+subscript_signature :: proc(c: ^Compiler, sig: ^Signature) {
+
+}
+
+infix_op :: proc(c: ^Compiler, can_assign: bool) {
+
+}
+
+infix_signature :: proc(c: ^Compiler, sig: ^Signature) {
+
+}
+
+mixed_signature :: proc(c: ^Compiler, sig: ^Signature) {
+
+}
+
+unary_signature :: proc(c: ^Compiler, sig: ^Signature) {
+
+}
+
+
+
+call :: proc(c: ^Compiler, can_assign: bool) {
+
+}

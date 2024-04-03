@@ -99,6 +99,89 @@ Token_Kind :: enum {
 	EOF,
 }
 
+tokens := [Token_Kind]string {
+	.Error          = "Invalid",
+	.Left_Paren     = "(",
+	.Right_Paren    = ")",
+	.Left_Bracket   = "[",
+	.Right_Bracket  = "]",
+	.Left_Brace     = "{",
+	.Right_Brace    = "}",
+	.Colon          = ":",
+	.Dot            = ".",
+	.Dot_Dot        = "..",
+	.Dot_Dot_Dot    = "...",
+	.Comma          = ",",
+	.Star           = "*",
+	.Slash          = "/",
+	.Percent        = "%",
+	.Hash           = "#",
+	.Plus           = "+",
+	.Minus          = "-",
+	.Lt_Lt          = "<<",
+	.Gt_Gt          = ">>",
+	.Pipe           = "|",
+	.Pipe_Pipe      = "||",
+	.Caret          = "^",
+	.Amp            = "&",
+	.Amp_Amp        = "&&",
+	.Bang           = "!",
+	.Tilde          = "~",
+	.Question       = "?",
+	.Eq             = "=",
+	.Lt             = "<",
+	.Gt             = ">",
+	.Lt_Eq          = "<=",
+	.Gt_Eq          = ">=",
+	.Eq_Eq          = "==",
+	.Bang_Eq        = "!=",
+	._Keyword_Begin = "",
+	.Break          = "break",
+	.Continue       = "continue",
+	.Class          = "class",
+	.Construct      = "construct",
+	.Else           = "else",
+	.False          = "false",
+	.For            = "for",
+	.Foreign        = "foreign",
+	.If             = "if",
+	.Import         = "import",
+	.As             = "as",
+	.In             = "in",
+	.Is             = "is",
+	.Null           = "null",
+	.Return         = "return",
+	.Static         = "static",
+	.Super          = "super",
+	.This           = "this",
+	.True           = "true",
+	.Var            = "var",
+	.While          = "while",
+	._Keyword_End   = "",
+	.Field          = "field",
+	.Static_Field   = "static field",
+	.Name           = "name",
+	.Number         = "number",
+	.String         = "string",
+	.Interpolation  = "interpolation",
+	.Line           = "newline",
+	.Comment        = "comment",
+	.EOF            = "EOF",
+}
+
+token_to_string :: proc(tok: Token) -> string {
+	return tokens[tok.kind]
+}
+
+token_kind_to_string :: proc(kind: Token_Kind) -> string {
+	return tokens[kind]
+}
+
+token_string :: proc {
+	token_to_string,
+	token_kind_to_string,
+}
+
 /*
 	Note(Dragos): Should the token have pos+end or just pos? Odin's tokenizer does just pos, and leaves the parser to have end of expressions. I don't really know.
 	A single pos behaves well on trivial tokens, but becomes false on things like raw strings
@@ -112,6 +195,7 @@ Token :: struct {
 }
 
 Token_Pos :: struct {
+	file  : string,
 	offset: int,
 	line  : int,
 	column: int,
@@ -137,6 +221,7 @@ default_token :: proc() -> Token {
 }
 
 Tokenizer :: struct {
+	file       : string,
 	source     : string,
 	ch         : rune,                             // the most recent rune
 	offset     : int,                              // offset of [ch]
@@ -145,16 +230,16 @@ Tokenizer :: struct {
 	line_count : int,
 	parens     : [MAX_INTERPOLATION_NESTING]int,   // Tracks the lexing state when tokenizing interpolated strings
 	num_parens : int,
-	has_errors : bool,
-	err: Error_Handler,
+	error_count: int,
+	err        : Error_Handler,
 }
 
-Error_Handler :: #type proc(t: ^Tokenizer, format: string, args: ..any)
+Error_Handler :: #type proc(pos: Token_Pos, format: string, args: ..any)
 
-default_error_handler :: proc(t: ^Tokenizer, format: string, args: ..any) {
-	fmt.print("Lexing Error: ", "")
-	fmt.printf(format, args)
-	fmt.println()
+default_error_handler :: proc(pos: Token_Pos, format: string, args: ..any) {
+	fmt.eprintf("%s(%d:%d): ", pos.file, pos.line, pos.column)
+	fmt.eprintf(format, ..args)
+	fmt.eprintf("\n")
 }
 
 tokenizer_init :: proc(t: ^Tokenizer) {
@@ -173,6 +258,7 @@ offset_to_pos :: proc(t: ^Tokenizer, offset: int) -> (pos: Token_Pos) {
 	pos.offset = offset
 	pos.line = t.line_count
 	pos.column = offset - t.line_offset + 1
+	pos.file = t.file
 	return pos
 }
 
@@ -215,8 +301,12 @@ is_whitespace_or_lf :: proc(r: rune) -> bool {
 // TODO(DRAGOS): ADD PROPER ERROR HANDLING PROCEDURES. NO PRINTF NONSENSE
 
 @private
-lex_error :: proc(t: ^Tokenizer, format: string, args: ..any) {
-	if t.err != nil do t.err(t, format, args)
+lex_error :: proc(t: ^Tokenizer, offset: int, format: string, args: ..any) {
+	t.error_count += 1
+	if t.err != nil {
+		pos := offset_to_pos(t, offset)
+		t.err(pos, format, ..args)
+	}
 }
 
 @private
@@ -229,13 +319,13 @@ advance_rune :: proc(t: ^Tokenizer) {
 		}
 		r, w := rune(t.source[t.read_offset]), 1
 		switch {
-		case r == 0: lex_error(t, "Illegal character NUL")
+		case r == 0: lex_error(t, t.offset, "Illegal character NUL")
 		case r >= utf8.RUNE_SELF:
 			r, w = utf8.decode_rune_in_string(t.source[t.read_offset:])
 			if r == utf8.RUNE_ERROR && w == 1 {
-				lex_error(t, "Illegal UTF-8 encoding")
+				lex_error(t, t.offset, "Illegal UTF-8 encoding")
 			} else if r == utf8.RUNE_BOM && t.offset > 0 {
-				lex_error(t, "Illegal byte order mask")
+				lex_error(t, t.offset, "Illegal byte order mask")
 			}
 		}
 		t.read_offset += w
@@ -320,7 +410,7 @@ scan_comment :: proc(t: ^Tokenizer) -> string {
 				if nest == 0 do break general
 			}
 		}
-		lex_error(t, "Comment not terminated.")
+		lex_error(t, offset, "Comment not terminated.")
 	}
 	lit := t.source[offset : t.offset]
 	
@@ -515,7 +605,7 @@ scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 		case '.':
 		case: // TODO(DRAGOS): figure out a better way to handle 0. This seems a bit of a hack right now
 			if !is_whitespace_or_lf(auto_cast peek_byte(t)) {
-				lex_error(t, "Expected either '.' or 'x' for a number literal starting with 0")
+				lex_error(t, offset, "Expected either '.' or 'x' for a number literal starting with 0")
 			}
 			
 		}
@@ -532,7 +622,7 @@ scan_number :: proc(t: ^Tokenizer) -> (text: string, value: Value) {
 		if t.ch == 'e' || t.ch == 'E' {
 			advance_rune(t)
 			if t.ch == '-' || t.ch == '+' do advance_rune(t)
-			if !is_digit(t.ch) do lex_error(t, "Undetermined scientific notation.")
+			if !is_digit(t.ch) do lex_error(t, offset, "Undetermined scientific notation.")
 			for is_digit(t.ch) do advance_rune(t)
 		}
 	}
@@ -549,7 +639,7 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 	for {
 		ch := t.ch
 		if ch == '\n' || ch < 0 {
-			lex_error(t, "String was not terminated.")
+			lex_error(t, t.offset, "String was not terminated.")
 			break
 		}
 		
@@ -567,7 +657,7 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 		if ch == '%' {
 			if t.num_parens < MAX_INTERPOLATION_NESTING {
 				advance_rune(t)
-				if t.ch != '(' do lex_error(t, "Expected '(' after '%%'.")
+				if t.ch != '(' do lex_error(t, t.offset, "Expected '(' after '%%'.")
 				advance_rune(t)
 				t.parens[t.num_parens] = 1
 				t.num_parens += 1
@@ -575,7 +665,7 @@ scan_string :: proc(t: ^Tokenizer) -> (text: string, kind: Token_Kind) {
 				end_minus = 2
 				break
 			}
-			lex_error(t, "Interpolation may only nest %d levels deep.", MAX_INTERPOLATION_NESTING)
+			lex_error(t, t.offset, "Interpolation may only nest %d levels deep.", MAX_INTERPOLATION_NESTING)
 		}
 		advance_rune(t)
 	}
@@ -592,7 +682,7 @@ scan_raw_string :: proc(t: ^Tokenizer) -> (text: string) {
 	for {
 		advance_rune(t)
 		if t.ch == -1 {
-			lex_error(t, "Unterminated raw string.")
+			lex_error(t, t.offset, "Unterminated raw string.")
 			break
 		}
 		c := t.ch

@@ -50,12 +50,15 @@ Class_Info :: struct {
 	signature        : ^Signature,        //The signature of the method being compiled
 }
 
+
+
 Parser :: struct {
 	t: Tokenizer,
 	vm: ^VM,
 	current: Token,
 	next: Token,
 	previous: Token,
+
 }
 
 Compiler :: struct {
@@ -319,15 +322,119 @@ compile :: proc(vm: ^VM, module: ^Module, source: string, is_expression: bool) -
 	compiler_init(&c, &p, nil, false)
 
 	if is_expression {
-		
+		expression(&c)
+		consume(&c, .EOF, "Expected end of expression")
+	} else {
+		for !match(&c, .EOF) {
+			definition(&c)
+			if !match_line(&c) {
+				consume(&c, .EOF, "Expected end of file")
+				break
+			}
+		}
+
+		// emit_op
 	}
 
+	// emit_op
+	// See if there are any implicitly declared module-level variables that never
+ 	// got an explicit definition. They will have values that are numbers
+ 	// indicating the line where the variable was first used.
+
+	// TODO(Dragos): whatever this comment
+	
 
 	return nil
 }
 
 expression :: proc(c: ^Compiler) {
 	parse_precedence(c, .Lowest)
+}
+
+definition :: proc(c: ^Compiler) {
+	if match_attribute(c) {
+		definition(c)
+		return
+	}
+	if match(c, .Class) {
+		class_definition(c, false)
+		return
+	} else if match(c, .Foreign) {
+		consume(c, .Class, "Expected 'class' after 'foreign'")
+		class_definition(c, true)
+	}
+}
+
+class_definition :: proc(c: ^Compiler, is_foreign: bool) {
+
+}
+
+statement :: proc(c: ^Compiler) {
+
+}
+
+// TODO(Dragos): make this...nicer 
+match_attribute :: proc(c: ^Compiler) -> bool {
+	if match(c, .Hash) {
+		c.num_attributes += 1
+		runtime_access := match(c, .Bang)
+		if match(c, .Name) {
+			group := c.parser.previous.value
+			ahead := c.parser.current.kind
+			if ahead == .Eq || ahead == .Line {
+				key := group
+				value := NULL_VAL
+				if match(c, .Eq) {
+					value = consume_literal(c, "Expected a Bool, Num, String or Identifier literal for an attribute value")
+				}
+				if runtime_access do add_to_attribute_group(c, NULL_VAL, key, value)
+			} else if match(c, .Left_Paren) {
+				ignore_newlines(c)
+				if match(c, .Right_Paren) {
+					fmt.printf("Expected attributes in group, group cannot be empty")
+				} else {
+					for c.parser.current.kind != .Right_Paren {
+						consume(c, .Name, "Expected name for attribute key")
+						key := c.parser.previous.value
+						value := NULL_VAL
+						if match(c, .Eq) {
+							value = consume_literal(c, "Expect a Bool, Num, String or Identifier literal for an attribute value.")
+						}
+						if runtime_access do add_to_attribute_group(c, group, key, value)
+						ignore_newlines(c)
+						match(c, .Comma) or_break
+						ignore_newlines(c)
+					}
+					ignore_newlines(c)
+					consume(c, .Right_Paren, "Expected ')' after grouped attributes")
+				}
+			} else {
+				fmt.printf("Expected an equal, newline or grouping after an attribute key\n")
+			}
+		} else {
+			fmt.printf("Ex pected an attribute definition after '#'.\n")
+		}
+		consume_line(c, "Expected newline after attribute.")
+		return true
+	}
+
+	return false
+}
+
+add_to_attribute_group :: proc(c: ^Compiler, group, key, value: Value) {
+
+}
+
+consume_literal :: proc(c: ^Compiler, err_msg: string) -> Value {
+	switch {
+	case match(c, .False): return FALSE_VAL
+	case match(c, .True): return TRUE_VAL
+	case match(c, .Number), 
+	     match(c, .String), 
+		 match(c, .Name): return c.parser.previous.value
+	}
+	fmt.printf("Error: %v\n", err_msg) // TODO(DRAGOS): FIX ERROR HANDLING
+	return NULL_VAL
 }
 
 parse_precedence :: proc(c: ^Compiler, prec: Precedence) {
@@ -382,14 +489,18 @@ map_lit :: proc(c: ^Compiler, can_assign: bool) {
 }
 
 unary_op :: proc(c: ^Compiler, can_assign: bool) {
+	rule := get_rule(c.parser.previous.kind)
+	ignore_newlines(c)
+	parse_precedence(c, Precedence(cast(int)Precedence.Unary + 1))
 
-}
-
-subscript :: proc(c: ^Compiler, can_assign: bool) {
-
+	// call_method(c, 0, rule.name, 1)
 }
 
 boolean :: proc(c: ^Compiler, can_assign: bool) {
+	// TODO emitOp
+}
+
+subscript :: proc(c: ^Compiler, can_assign: bool) {
 
 }
 

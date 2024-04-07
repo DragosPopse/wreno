@@ -1,1 +1,9 @@
-var hello = 2 + 3
+class SuperTest {
+
+}
+
+class TestClass is SuperTest {
+    -(other) {
+        
+    }
+} 

@@ -77,6 +77,103 @@ Var_Stmt :: struct {
     initializer: ^Expr,
 }
 
+Class_Stmt :: struct {
+    using node: Stmt,
+    keyword: Token,
+    name: Token,
+    superclass: Maybe(Token),
+    body: ^Class_Body_Stmt,
+}
+
+Class_Body_Stmt :: struct {
+    using node: Node,
+    open: Token,
+    methods: []^Any_Method_Definition_Stmt,
+    close: Token,
+}
+
+
+Block_Stmt :: struct {
+    using node: Stmt,
+    open: Token,
+    stmts: []^Stmt,
+    close: Token,
+}
+
+Unary_Definition_Stmt :: struct {
+    using node: Stmt,
+    op: Token,
+    def: ^Block_Stmt,
+}
+
+Definition_Params_Stmt :: struct {
+    using node: Stmt,
+    open: Token,
+    params: []Token, // Note(Dragos): Should we put Identifiers as an AST thing or keep them tokens? 
+    close: Token,
+}
+
+Binary_Definition_Stmt :: struct {
+    using node: Stmt,
+    op: Token,
+    params: ^Definition_Params_Stmt,
+    def: ^Block_Stmt,
+}
+
+Geter_Deifiniton_Stmt :: struct {
+    using node: Stmt,
+    name: Token,
+    def: ^Block_Stmt,
+}
+
+Setter_Definition_Stmt :: struct {
+    using node: Stmt,
+    setter: Token,
+    op: Token, // =
+    params: ^Definition_Params_Stmt,
+    def: ^Block_Stmt,
+}
+
+Construct_Definition_Stmt :: struct {
+    using node: Stmt,
+    keyword: Token,
+    name: Token,
+    params: ^Definition_Params_Stmt,
+    def: ^Block_Stmt,
+}
+
+Method_Definition_Stmt :: struct {
+    using node: Stmt,
+    name: Token,
+    params: ^Definition_Params_Stmt,
+    def: ^Block_Stmt,
+}
+
+Subscript_Definition_Stmt :: struct {
+    using node: Stmt,
+    params: ^Definition_Params_Stmt,
+    def: ^Block_Stmt,
+}
+
+Subscript_Setter_Definition_Stmt :: struct { // [x] = (v) { }
+    using node: Stmt,
+    params: ^Definition_Params_Stmt,
+    op: Token, // =
+    assignment: ^Definition_Params_Stmt,
+    def: ^Block_Stmt,
+}
+
+Any_Method_Definition_Stmt :: union {
+    ^Unary_Definition_Stmt,
+    ^Binary_Definition_Stmt,
+    ^Geter_Deifiniton_Stmt,
+    ^Setter_Definition_Stmt,
+    ^Construct_Definition_Stmt,
+    ^Method_Definition_Stmt,
+    ^Subscript_Definition_Stmt,
+    ^Subscript_Setter_Definition_Stmt,
+    ^Bad_Stmt,
+}
 
 Bad_Expr :: struct {
     using expr: Expr,
@@ -92,6 +189,8 @@ Any_Node :: union {
 
     ^Bad_Stmt,
     ^Var_Stmt,
+    ^Class_Stmt,
+    ^Class_Body_Stmt,
 }
 
 Any_Expr :: union {
@@ -101,4 +200,6 @@ Any_Expr :: union {
 Any_Stmt :: union {
     ^Bad_Stmt,
     ^Var_Stmt,
+    ^Class_Stmt,
+    ^Class_Body_Stmt,
 }

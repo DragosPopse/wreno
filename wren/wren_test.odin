@@ -10,6 +10,7 @@ WREN_SOURCE := #load("wren_core.wren", string)
 HELLO_SOURCE := #load("../examples/hello.wren", string)
 
 
+
 @test
 test_tokens :: proc(T: ^testing.T) {
 	source := HELLO_SOURCE
@@ -25,6 +26,15 @@ test_tokens :: proc(T: ^testing.T) {
 		}
 	}
 	free_all(context.temp_allocator)
+}
+
+@test
+test_parser :: proc(T: ^testing.T) {
+	source := HELLO_SOURCE
+	p := default_parser()
+	file := file_new("examples/hello.wren")
+	testing.expect(T, file != nil, "Failed to create file")
+	parser_parse_file(&p, file)
 }
 
 @test
